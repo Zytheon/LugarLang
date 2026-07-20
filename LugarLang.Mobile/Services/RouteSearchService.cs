@@ -1,4 +1,5 @@
 ﻿using CdoGtfsConverter.Models;
+using LugarLang.Mobile.Models;
 
 namespace LugarLang.Mobile.Services;
 
@@ -6,81 +7,85 @@ public class RouteSearchService
 {
     private readonly TransportNetwork network;
 
-
     public RouteSearchService(TransportNetwork network)
     {
         this.network = network;
     }
 
-
-    public string Search(string from, string to)
+    public RouteSearchResult Search(string from, string to)
     {
         foreach (Route route in network.Routes)
         {
-            if (route.Inbound != null)
-            {
-                bool hasFrom =
-                    route.Inbound.Stops.Any(
-                        stop => stop.Name.Contains(
-                            from,
-                            StringComparison.OrdinalIgnoreCase));
+            RouteSearchResult? result =
+                SearchDirection(
+                    route.Id,
+                    "Inbound",
+                    route.Inbound,
+                    from,
+                    to);
 
+            if (result != null)
+                return result;
 
-                bool hasTo =
-                    route.Inbound.Stops.Any(
-                        stop => stop.Name.Contains(
-                            to,
-                            StringComparison.OrdinalIgnoreCase));
+            result =
+                SearchDirection(
+                    route.Id,
+                    "Outbound",
+                    route.Outbound,
+                    from,
+                    to);
 
-
-                if (hasFrom && hasTo)
-                {
-                    return BuildResult(
-                        route,
-                        "Inbound");
-                }
-            }
-
-
-
-            if (route.Outbound != null)
-            {
-                bool hasFrom =
-                    route.Outbound.Stops.Any(
-                        stop => stop.Name.Contains(
-                            from,
-                            StringComparison.OrdinalIgnoreCase));
-
-
-                bool hasTo =
-                    route.Outbound.Stops.Any(
-                        stop => stop.Name.Contains(
-                            to,
-                            StringComparison.OrdinalIgnoreCase));
-
-
-                if (hasFrom && hasTo)
-                {
-                    return BuildResult(
-                        route,
-                        "Outbound");
-                }
-            }
+            if (result != null)
+                return result;
         }
 
-
-        return "No direct route found.";
+        return new RouteSearchResult
+        {
+            Found = false
+        };
     }
 
-
-
-    private string BuildResult(
-        Route route,
-        string direction)
+    private RouteSearchResult? SearchDirection(
+        string routeId,
+        string direction,
+        Direction? routeDirection,
+        string from,
+        string to)
     {
-        return
-            $"Ride: {route.Id}\n\n" +
-            $"Direction: {direction}\n\n" +
-            "Direct route found.";
+        if (routeDirection == null)
+            return null;
+
+        int fromIndex = routeDirection.Stops.FindIndex(
+            stop => stop.Name.Contains(
+                from,
+                StringComparison.OrdinalIgnoreCase));
+
+        int toIndex = routeDirection.Stops.FindIndex(
+            stop => stop.Name.Contains(
+                to,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (fromIndex == -1 || toIndex == -1)
+            return null;
+
+        // Destination must come after boarding stop
+        if (fromIndex > toIndex)
+            return null;
+
+        List<Stop> journeyStops =
+            routeDirection.Stops
+                .Skip(fromIndex)
+                .Take(toIndex - fromIndex + 1)
+                .ToList();
+
+        return new RouteSearchResult
+        {
+            Found = true,
+            RouteId = routeId,
+            Direction = direction,
+            BoardingStop = routeDirection.Stops[fromIndex],
+            DestinationStop = routeDirection.Stops[toIndex],
+            Stops = journeyStops
+        };
     }
 }
