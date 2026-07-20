@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../../CdoGtfsConverter/CdoGtfsConverter.Backend/CdoGtfsConverter.csproj" />
+  <Project Path="LugarLang.Mobile.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>

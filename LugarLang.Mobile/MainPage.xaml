@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="LugarLang.Mobile.MainPage"
+    Title="LugarLang">
+
+    <ScrollView>
+
+        <VerticalStackLayout
+            Padding="24"
+            Spacing="20">
+
+            <!-- Header -->
+            <Label
+                Text="🚍 LugarLang"
+                FontSize="30"
+                FontAttributes="Bold"
+                HorizontalOptions="Center" />
+
+            <Label
+                Text="Find the best jeepney route"
+                FontSize="16"
+                HorizontalOptions="Center"
+                HorizontalTextAlignment="Center"
+                Opacity="0.7" />
+
+            <BoxView
+                HeightRequest="1" />
+
+
+            <!-- FROM -->
+            <Label
+                Text="📍 From"
+                FontAttributes="Bold" />
+
+            <Entry
+                x:Name="FromEntry"
+                Placeholder="Search origin..."
+                TextChanged="FromEntry_TextChanged" />
+
+
+            <CollectionView
+                x:Name="FromSuggestions"
+                SelectionMode="Single"
+                SelectionChanged="FromSuggestions_SelectionChanged">
+
+                <CollectionView.ItemTemplate>
+
+                    <DataTemplate>
+
+                        <Label
+                            Text="{Binding}"
+                            Padding="10"
+                            FontSize="16" />
+
+                    </DataTemplate>
+
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
+
+
+
+            <!-- TO -->
+            <Label
+                Text="🎯 To"
+                FontAttributes="Bold" />
+
+            <Entry
+                x:Name="ToEntry"
+                Placeholder="Search destination..."
+                TextChanged="ToEntry_TextChanged" />
+
+
+            <CollectionView
+                x:Name="ToSuggestions"
+                SelectionMode="Single"
+                SelectionChanged="ToSuggestions_SelectionChanged">
+
+                <CollectionView.ItemTemplate>
+
+                    <DataTemplate>
+
+                        <Label
+                            Text="{Binding}"
+                            Padding="10"
+                            FontSize="16" />
+
+                    </DataTemplate>
+
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
+
+
+
+            <!-- BUTTON -->
+            <Button
+                x:Name="FindRouteButton"
+                Text="Find Route"
+                HeightRequest="55"
+                Clicked="FindRouteButton_Clicked" />
+
+
+
+            <BoxView
+                HeightRequest="1" />
+
+
+
+            <!-- RESULTS -->
+            <Label
+                Text="Results"
+                FontAttributes="Bold"
+                FontSize="18" />
+
+
+            <Border
+                StrokeShape="RoundRectangle 12"
+                Padding="16">
+
+                <Label
+                    x:Name="ResultsLabel"
+                    Text="No route searched yet."
+                    LineBreakMode="WordWrap" />
+
+            </Border>
+
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>

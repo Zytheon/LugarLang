@@ -1,0 +1,17 @@
+# Visual Studio
+.vs/
+
+# Build output
+bin/
+obj/
+
+# Rider
+.idea/
+
+# User-specific files
+*.user
+*.suo
+
+# Windows
+Thumbs.db
+Desktop.ini
