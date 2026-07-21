@@ -104,6 +104,13 @@
                 Clicked="FindRouteButton_Clicked" />
 
 
+            <Button
+                Text="🔧 Diagnostics"
+                HeightRequest="50"
+                Clicked="DiagnosticsButton_Clicked" />
+
+
+
 
             <BoxView
                 HeightRequest="1" />

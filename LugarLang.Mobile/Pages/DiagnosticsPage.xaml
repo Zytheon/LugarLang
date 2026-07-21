@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="LugarLang.Mobile.Pages.DiagnosticsPage"
+    Title="Route Diagnostics">
+
+    <ScrollView>
+
+        <VerticalStackLayout
+            Padding="24"
+            Spacing="20">
+
+            <Label
+                Text="🔧 Route Diagnostics"
+                FontSize="28"
+                FontAttributes="Bold" />
+
+            <Label
+                Text="Diagnostic Mode"
+                FontAttributes="Bold" />
+
+            <Picker
+                x:Name="ModePicker"
+                SelectedIndexChanged="ModePicker_SelectedIndexChanged">
+
+                <Picker.Items>
+
+                    <x:String>Routes at Stop</x:String>
+                    <x:String>Transfer Opportunities</x:String>
+
+                </Picker.Items>
+
+            </Picker>
+
+            <Entry
+                x:Name="StopSearchEntry"
+                Placeholder="Search..." />
+
+            <Button
+                Text="Analyze"
+                Clicked="AnalyzeButton_Clicked"
+                HeightRequest="50" />
+
+
+            <Label
+                x:Name="ResultsLabel"
+                Text="Enter a search."
+                LineBreakMode="WordWrap" />
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>
