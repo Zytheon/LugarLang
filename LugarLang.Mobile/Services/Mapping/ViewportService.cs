@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace LugarLang.Mobile.Mapping
+namespace LugarLang.Mobile.Services.Mapping
 {
-    internal class MapService
+    internal class ViewportService
     {
     }
 }
