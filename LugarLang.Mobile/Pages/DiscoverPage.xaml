@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.DiscoverPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Discover">
+
+    <ScrollView>
+
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="24">
+
+            <Label
+                Text="Discover"
+                FontSize="32"
+                FontAttributes="Bold" />
+
+            <!-- Near Me -->
+
+            <Button
+                Text="📍  Near Me"
+                FontSize="18"
+                HeightRequest="60"
+                Clicked="OnNearMeClicked" />
+
+            <!-- Explore by interest -->
+
+            <VerticalStackLayout Spacing="12">
+
+                <Label
+                    Text="Explore by interest"
+                    FontSize="22"
+                    FontAttributes="Bold" />
+
+                <Grid
+                    ColumnDefinitions="*,*"
+                    RowDefinitions="Auto,Auto,Auto,Auto"
+                    ColumnSpacing="12"
+                    RowSpacing="12">
+
+                    <Button
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        Text="🍜 Food"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="0"
+                        Grid.Column="1"
+                        Text="🏨 Stay"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Text="🏛 Government"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Text="🏞 Attractions"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="2"
+                        Grid.Column="0"
+                        Text="☕ Cafes"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="2"
+                        Grid.Column="1"
+                        Text="🛍 Shopping"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="3"
+                        Grid.Column="0"
+                        Text="🏥 Health"
+                        Clicked="OnInterestClicked" />
+
+                    <Button
+                        Grid.Row="3"
+                        Grid.Column="1"
+                        Text="🚏 Transport"
+                        Clicked="OnInterestClicked" />
+
+                </Grid>
+
+            </VerticalStackLayout>
+
+            <!-- Explore by place -->
+
+            <VerticalStackLayout Spacing="12">
+
+                <Label
+                    Text="Explore by place"
+                    FontSize="22"
+                    FontAttributes="Bold" />
+
+                <Grid
+                    ColumnDefinitions="*,*"
+                    RowDefinitions="Auto,Auto,Auto"
+                    ColumnSpacing="12"
+                    RowSpacing="12">
+
+                    <Button
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        Text="Northern Mindanao"
+                        Clicked="OnRegionClicked" />
+
+                    <Button
+                        Grid.Row="0"
+                        Grid.Column="1"
+                        Text="Central Visayas"
+                        Clicked="OnRegionClicked" />
+
+                    <Button
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Text="Davao Region"
+                        Clicked="OnRegionClicked" />
+
+                    <Button
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Text="Metro Manila"
+                        Clicked="OnRegionClicked" />
+
+                    <Button
+                        Grid.Row="2"
+                        Grid.Column="0"
+                        Text="Western Visayas"
+                        Clicked="OnRegionClicked" />
+
+                    <Button
+                        Grid.Row="2"
+                        Grid.Column="1"
+                        Text="More..."
+                        Clicked="OnRegionClicked" />
+
+                </Grid>
+
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>
+
+
+
+
+

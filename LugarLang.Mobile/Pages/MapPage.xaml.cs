@@ -1,9 +1,10 @@
 ﻿using CdoGtfsConverter.Models;
-using LugarLang.Mobile.Services;
 using LugarLang.Mobile.Services.Mapping;
 using LugarLang.Mobile.Services.Mapping.Factories;
 using LugarLang.Mobile.Services.Routing;
+using LugarLang.Mobile.UI.Layout;
 using LugarLang.Mobile.Services.RoutingVisualization;
+using LugarLang.Mobile.Services.Transit;
 using LugarLang.Mobile.UI.Routing;
 using Mapsui;
 using Mapsui.Layers;
@@ -19,12 +20,16 @@ public partial class MapPage : ContentPage
 {
     private readonly MapControl mapControl;
     private readonly RouteLayerFactory routeLayerFactory;
+    private readonly MapPinService mapPinService;
+    private readonly MapInteractionController mapInteractionController;
+
     private readonly TransitDataService transitDataService;
     private readonly RouteAccessibilityService routeAccessibilityService;
     private readonly TripRoutingService tripRoutingService;
     private readonly JourneyRoutingService journeyRoutingService;
     private readonly RoutingVisualizationService routingVisualizationService;
     private readonly RoutingCandidateView routingCandidateView;
+    private readonly MapPageLayoutBuilder layoutBuilder;
 
     private MemoryLayer? inboundLayer;
     private MemoryLayer? outboundLayer;
@@ -40,22 +45,18 @@ public partial class MapPage : ContentPage
     private Picker routePicker = null!;
     private Picker walkingDistancePicker = null!;
 
+    private Button fromButton = null!;
+    private Button toButton = null!;
+
     private double maximumWalkingDistanceMeters = 500;
 
     private GeoPoint? fromPoint;
     private GeoPoint? toPoint;
 
-    private List<DirectionEvaluation> currentCandidates =
-        new();
+    private List<DirectionEvaluation> currentCandidates = new();
 
-    private enum PinMode
-    {
-        None,
-        SettingFrom,
-        SettingTo
-    }
+    private Grid? rootLayout;
 
-    private PinMode pinMode = PinMode.None;
 
     public MapPage()
     {
@@ -63,6 +64,12 @@ public partial class MapPage : ContentPage
 
         routeLayerFactory =
             new RouteLayerFactory();
+
+        mapPinService =
+            new MapPinService();
+        
+        mapInteractionController =
+            new MapInteractionController();
 
         transitDataService =
             new TransitDataService();
@@ -88,6 +95,9 @@ public partial class MapPage : ContentPage
 
         routingCandidateView =
             new RoutingCandidateView();
+
+        layoutBuilder =
+            new MapPageLayoutBuilder();
 
         routingCandidateView.CandidateSelected +=
             RoutingCandidateView_CandidateSelected;
@@ -136,8 +146,8 @@ public partial class MapPage : ContentPage
         walkingDistancePicker.SelectedIndexChanged +=
             WalkingDistancePicker_SelectedIndexChanged;
 
-        Button fromButton =
-            new()
+        fromButton =
+            new Button
             {
                 Text = "Set From",
                 Margin = new Thickness(5)
@@ -146,12 +156,12 @@ public partial class MapPage : ContentPage
         fromButton.Clicked +=
             (sender, args) =>
             {
-                pinMode =
-                    PinMode.SettingFrom;
+                mapInteractionController
+                    .StartSettingFrom();
             };
 
-        Button toButton =
-            new()
+        toButton =
+            new Button
             {
                 Text = "Set To",
                 Margin = new Thickness(5)
@@ -160,116 +170,14 @@ public partial class MapPage : ContentPage
         toButton.Clicked +=
             (sender, args) =>
             {
-                pinMode =
-                    PinMode.SettingTo;
+                mapInteractionController
+                    .StartSettingTo();
             };
 
         mapControl.Info +=
             MapControl_Info;
 
-        Grid controls =
-            new()
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition(
-                        GridLength.Star),
-
-                    new ColumnDefinition(
-                        GridLength.Auto),
-
-                    new ColumnDefinition(
-                        GridLength.Auto),
-
-                    new ColumnDefinition(
-                        GridLength.Auto)
-                }
-            };
-
-        Grid.SetColumn(
-            routePicker,
-            0);
-
-        Grid.SetColumn(
-            walkingDistancePicker,
-            1);
-
-        Grid.SetColumn(
-            fromButton,
-            2);
-
-        Grid.SetColumn(
-            toButton,
-            3);
-
-        controls.Children.Add(
-            routePicker);
-
-        controls.Children.Add(
-            walkingDistancePicker);
-
-        controls.Children.Add(
-            fromButton);
-
-        controls.Children.Add(
-            toButton);
-
-        Grid mainContent =
-            new()
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition(
-                        GridLength.Star),
-
-                    new ColumnDefinition(
-                        new GridLength(320))
-                }
-            };
-
-        Grid.SetColumn(
-            mapControl,
-            0);
-
-        Grid.SetColumn(
-            routingCandidateView,
-            1);
-
-        mainContent.Children.Add(
-            mapControl);
-
-        mainContent.Children.Add(
-            routingCandidateView);
-
-        Grid layout =
-            new()
-            {
-                RowDefinitions =
-                {
-                    new RowDefinition(
-                        GridLength.Auto),
-
-                    new RowDefinition(
-                        GridLength.Star)
-                }
-            };
-
-        Grid.SetRow(
-            controls,
-            0);
-
-        Grid.SetRow(
-            mainContent,
-            1);
-
-        layout.Children.Add(
-            controls);
-
-        layout.Children.Add(
-            mainContent);
-
-        Content =
-            layout;
+        BuildResponsiveLayout();
 
         if (
             transitDataService.Network.Routes.Count > 0)
@@ -306,33 +214,27 @@ public partial class MapPage : ContentPage
     }
 
     private void MapControl_Info(
-        object? sender,
-        MapInfoEventArgs e)
+    object? sender,
+    MapInfoEventArgs e)
     {
-        if (pinMode == PinMode.None)
+        if (!mapInteractionController.TryConsumeMapTap(
+            e.WorldPosition,
+            out MapInteractionController.PinMode mode))
         {
             return;
         }
 
-        MPoint position =
-            e.WorldPosition;
-
-        if (pinMode == PinMode.SettingFrom)
+        if (mode ==
+            MapInteractionController.PinMode.SettingFrom)
         {
-            SetFromPin(position);
-
-            pinMode =
-                PinMode.None;
-
+            SetFromPin(e.WorldPosition);
             return;
         }
 
-        if (pinMode == PinMode.SettingTo)
+        if (mode ==
+            MapInteractionController.PinMode.SettingTo)
         {
-            SetToPin(position);
-
-            pinMode =
-                PinMode.None;
+            SetToPin(e.WorldPosition);
         }
     }
 
@@ -478,7 +380,8 @@ public partial class MapPage : ContentPage
     {
         RemoveTripLayers();
 
-        if (fromPoint == null ||
+        if (
+            fromPoint == null ||
             toPoint == null)
         {
             return;
@@ -1029,4 +932,18 @@ public partial class MapPage : ContentPage
                 center,
                 resolution);
     }
+
+    private void BuildResponsiveLayout()
+    {
+        Content =
+            layoutBuilder.Build(
+                mapControl,
+                routingCandidateView,
+                routePicker,
+                walkingDistancePicker,
+                fromButton,
+                toButton,
+                Width);
+    }
+
 }

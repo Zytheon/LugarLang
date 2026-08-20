@@ -94,13 +94,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Components\Map\" />
-	  <Folder Include="Components\Discovery\" />
-	  <Folder Include="Components\Common\" />
-	  <Folder Include="Models\Discovery\" />
-	  <Folder Include="Models\Places\" />
-	  <Folder Include="Models\Routing\" />
-	  <Folder Include="Services\Discovery\" />
+	  <None Update="Pages\BookPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </None>
+	  <None Update="Pages\DiscoverPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </None>
 	</ItemGroup>
 
 </Project>
