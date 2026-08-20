@@ -1,24 +1,24 @@
 ﻿using CdoGtfsConverter.Models;
+using LugarLang.Mobile.Application.Routing;
 using LugarLang.Mobile.Services.Mapping;
 using LugarLang.Mobile.Services.Mapping.Factories;
 using LugarLang.Mobile.Services.Routing;
-using LugarLang.Mobile.UI.Layout;
 using LugarLang.Mobile.Services.RoutingVisualization;
 using LugarLang.Mobile.Services.Transit;
+using LugarLang.Mobile.UI.Layout;
 using LugarLang.Mobile.UI.Routing;
 using Mapsui;
 using Mapsui.Layers;
-using Mapsui.Nts;
-using Mapsui.Styles;
 using Mapsui.Tiling;
 using Mapsui.UI.Maui;
-using NetTopologySuite.Geometries;
 
 namespace LugarLang.Mobile.Pages;
 
 public partial class MapPage : ContentPage
 {
+    private readonly RouteDisplayService routeDisplayService;
     private readonly MapControl mapControl;
+    private readonly RoutingCoordinator routingCoordinator;
     private readonly RouteLayerFactory routeLayerFactory;
     private readonly MapPinService mapPinService;
     private readonly MapInteractionController mapInteractionController;
@@ -27,20 +27,11 @@ public partial class MapPage : ContentPage
     private readonly RouteAccessibilityService routeAccessibilityService;
     private readonly TripRoutingService tripRoutingService;
     private readonly JourneyRoutingService journeyRoutingService;
+    private readonly RoutingCandidateService routingCandidateService;
     private readonly RoutingVisualizationService routingVisualizationService;
     private readonly RoutingCandidateView routingCandidateView;
     private readonly MapPageLayoutBuilder layoutBuilder;
-
-    private MemoryLayer? inboundLayer;
-    private MemoryLayer? outboundLayer;
-    private MemoryLayer? stopLayer;
-
-    private MemoryLayer? fromLayer;
-    private MemoryLayer? toLayer;
-
-    private MemoryLayer? fromWalkingLayer;
-    private MemoryLayer? toWalkingLayer;
-    private MemoryLayer? ridingLayer;
+    private readonly TripVisualizationService tripVisualizationService;
 
     private Picker routePicker = null!;
     private Picker walkingDistancePicker = null!;
@@ -55,9 +46,6 @@ public partial class MapPage : ContentPage
 
     private List<DirectionEvaluation> currentCandidates = new();
 
-    private Grid? rootLayout;
-
-
     public MapPage()
     {
         InitializeComponent();
@@ -65,9 +53,13 @@ public partial class MapPage : ContentPage
         routeLayerFactory =
             new RouteLayerFactory();
 
+        routeDisplayService =
+            new RouteDisplayService(
+                routeLayerFactory);
+
         mapPinService =
             new MapPinService();
-        
+
         mapInteractionController =
             new MapInteractionController();
 
@@ -90,8 +82,20 @@ public partial class MapPage : ContentPage
                 tripRoutingService,
                 routeTransferService);
 
+        routingCandidateService =
+            new RoutingCandidateService();
+
         routingVisualizationService =
-            new RoutingVisualizationService();
+            new RoutingVisualizationService(
+                routingCandidateService);
+
+        tripVisualizationService =
+            new TripVisualizationService();
+
+        routingCoordinator =
+            new RoutingCoordinator(
+                tripRoutingService,
+                routingVisualizationService);
 
         routingCandidateView =
             new RoutingCandidateView();
@@ -107,6 +111,17 @@ public partial class MapPage : ContentPage
 
         mapControl.Map?.Layers.Add(
             OpenStreetMap.CreateTileLayer());
+        var initialCenter =
+    Mapsui.Projections.SphericalMercator
+        .FromLonLat(
+            124.6319,
+            8.4542);
+
+        mapControl.Map?.Navigator.CenterOnAndZoomTo(
+            new MPoint(
+                initialCenter.x,
+                initialCenter.y),
+            100);
 
         routePicker =
             new Picker
@@ -214,8 +229,8 @@ public partial class MapPage : ContentPage
     }
 
     private void MapControl_Info(
-    object? sender,
-    MapInfoEventArgs e)
+        object? sender,
+        MapInfoEventArgs e)
     {
         if (!mapInteractionController.TryConsumeMapTap(
             e.WorldPosition,
@@ -224,85 +239,50 @@ public partial class MapPage : ContentPage
             return;
         }
 
-        if (mode ==
+        if (
+            mode ==
             MapInteractionController.PinMode.SettingFrom)
         {
-            SetFromPin(e.WorldPosition);
+            SetFromPin(
+                e.WorldPosition);
+
             return;
         }
 
-        if (mode ==
+        if (
+            mode ==
             MapInteractionController.PinMode.SettingTo)
         {
-            SetToPin(e.WorldPosition);
+            SetToPin(
+                e.WorldPosition);
         }
     }
 
     private void SetFromPin(
         MPoint position)
     {
-        if (fromLayer != null)
+        if (fromPoint != null)
         {
             mapControl.Map?.Layers.Remove(
                 fromLayer);
         }
 
-        var point =
-            new NetTopologySuite.Geometries.Point(
-                position.X,
-                position.Y);
-
-        var feature =
-            new GeometryFeature
-            {
-                Geometry = point
-            };
-
-        feature.Styles.Add(
-            new SymbolStyle
-            {
-                SymbolScale = 0.8,
-
-                Fill =
-                    new Mapsui.Styles.Brush(
-                        Mapsui.Styles.Color.Blue),
-
-                Outline =
-                    new Pen(
-                        Mapsui.Styles.Color.White,
-                        2)
-            });
+        (
+            MemoryLayer layer,
+            GeoPoint point) =
+            mapPinService.CreatePin(
+                position,
+                "From Pin",
+                Mapsui.Styles.Color.Blue);
 
         fromLayer =
-            new MemoryLayer
-            {
-                Name = "From Pin",
+            layer;
 
-                Features =
-                    new List<IFeature>
-                    {
-                        feature
-                    }
-            };
+        fromPoint =
+            point;
 
         mapControl.Map?.Layers.Add(
             fromLayer);
-
-        var geographic =
-            Mapsui.Projections.SphericalMercator
-                .ToLonLat(
-                    position.X,
-                    position.Y);
-
-        fromPoint =
-            new GeoPoint
-            {
-                Longitude =
-                    geographic.lon,
-
-                Latitude =
-                    geographic.lat
-            };
 
         RecalculateAccessibility();
     }
@@ -310,75 +290,39 @@ public partial class MapPage : ContentPage
     private void SetToPin(
         MPoint position)
     {
-        if (toLayer != null)
+        if (toPoint != null)
         {
             mapControl.Map?.Layers.Remove(
                 toLayer);
         }
 
-        var point =
-            new NetTopologySuite.Geometries.Point(
-                position.X,
-                position.Y);
-
-        var feature =
-            new GeometryFeature
-            {
-                Geometry = point
-            };
-
-        feature.Styles.Add(
-            new SymbolStyle
-            {
-                SymbolScale = 0.8,
-
-                Fill =
-                    new Mapsui.Styles.Brush(
-                        Mapsui.Styles.Color.Red),
-
-                Outline =
-                    new Pen(
-                        Mapsui.Styles.Color.White,
-                        2)
-            });
+        (
+            MemoryLayer layer,
+            GeoPoint point) =
+            mapPinService.CreatePin(
+                position,
+                "To Pin",
+                Mapsui.Styles.Color.Red);
 
         toLayer =
-            new MemoryLayer
-            {
-                Name = "To Pin",
+            layer;
 
-                Features =
-                    new List<IFeature>
-                    {
-                        feature
-                    }
-            };
+        toPoint =
+            point;
 
         mapControl.Map?.Layers.Add(
             toLayer);
 
-        var geographic =
-            Mapsui.Projections.SphericalMercator
-                .ToLonLat(
-                    position.X,
-                    position.Y);
-
-        toPoint =
-            new GeoPoint
-            {
-                Longitude =
-                    geographic.lon,
-
-                Latitude =
-                    geographic.lat
-            };
-
         RecalculateAccessibility();
     }
 
+    private MemoryLayer? fromLayer;
+    private MemoryLayer? toLayer;
+
     private void RecalculateAccessibility()
     {
-        RemoveTripLayers();
+        tripVisualizationService.RemoveTripLayers(
+            mapControl);
 
         if (
             fromPoint == null ||
@@ -439,8 +383,8 @@ public partial class MapPage : ContentPage
     }
 
     private void RoutingCandidateView_CandidateSelected(
-        object? sender,
-        RoutingDebugInfo candidate)
+    object? sender,
+    RoutingDebugInfo candidate)
     {
         System.Diagnostics.Debug.WriteLine(
             $"CANDIDATE SELECTED: {candidate.RouteId} — {candidate.RouteName}");
@@ -450,7 +394,6 @@ public partial class MapPage : ContentPage
                 item =>
                     item.Route.Id ==
                     candidate.RouteId &&
-
                     item.DirectionName ==
                     candidate.DirectionName);
 
@@ -472,343 +415,28 @@ public partial class MapPage : ContentPage
             evaluation);
     }
 
+    private void DisplayTripRoute(
+    Route route)
+    {
+        routeDisplayService.DisplayRoute(
+            mapControl,
+            route,
+            fromPoint,
+            toPoint);
+    }
+
     private void DrawTrip(
         DirectionEvaluation evaluation)
     {
         System.Diagnostics.Debug.WriteLine(
             "DRAW TRIP: Starting.");
 
-        RemoveTripLayers();
-
-        DrawWalkingConnections(
-            evaluation.From,
-            evaluation.To,
-            evaluation.NearestFrom,
-            evaluation.NearestTo);
-
-        DrawRidingSegment(
-            evaluation.Direction.Path,
-            evaluation.FromIndex,
-            evaluation.ToIndex);
+        tripVisualizationService.DrawTrip(
+            mapControl,
+            evaluation);
 
         System.Diagnostics.Debug.WriteLine(
             "DRAW TRIP: Completed.");
-    }
-
-    private void DrawWalkingConnections(
-        GeoPoint from,
-        GeoPoint to,
-        GeoPoint nearestFrom,
-        GeoPoint nearestTo)
-    {
-        var fromProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    from.Longitude,
-                    from.Latitude);
-
-        var toProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    to.Longitude,
-                    to.Latitude);
-
-        var nearestFromProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    nearestFrom.Longitude,
-                    nearestFrom.Latitude);
-
-        var nearestToProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    nearestTo.Longitude,
-                    nearestTo.Latitude);
-
-        MPoint fromMapPoint =
-            new(
-                fromProjected.x,
-                fromProjected.y);
-
-        MPoint toMapPoint =
-            new(
-                toProjected.x,
-                toProjected.y);
-
-        MPoint nearestFromMapPoint =
-            new(
-                nearestFromProjected.x,
-                nearestFromProjected.y);
-
-        MPoint nearestToMapPoint =
-            new(
-                nearestToProjected.x,
-                nearestToProjected.y);
-
-        fromWalkingLayer =
-            CreateWalkingLayer(
-                "Walking From",
-                fromMapPoint,
-                nearestFromMapPoint,
-                Mapsui.Styles.Color.Green);
-
-        toWalkingLayer =
-            CreateWalkingLayer(
-                "Walking To",
-                nearestToMapPoint,
-                toMapPoint,
-                Mapsui.Styles.Color.Orange);
-
-        mapControl.Map?.Layers.Add(
-            fromWalkingLayer);
-
-        mapControl.Map?.Layers.Add(
-            toWalkingLayer);
-    }
-
-    private void DrawRidingSegment(
-        IList<GeoPoint> path,
-        int fromIndex,
-        int toIndex)
-    {
-        System.Diagnostics.Debug.WriteLine(
-            $"DRAW RIDING SEGMENT: fromIndex={fromIndex}, toIndex={toIndex}, pathCount={path.Count}");
-
-        if (
-            fromIndex < 0 ||
-            toIndex >= path.Count ||
-            toIndex <= fromIndex)
-        {
-            System.Diagnostics.Debug.WriteLine(
-                "DRAW RIDING SEGMENT: Invalid indices.");
-
-            return;
-        }
-
-        var coordinates =
-            new List<Coordinate>();
-
-        for (
-            int i = fromIndex;
-            i <= toIndex;
-            i++)
-        {
-            var projected =
-                Mapsui.Projections.SphericalMercator
-                    .FromLonLat(
-                        path[i].Longitude,
-                        path[i].Latitude);
-
-            coordinates.Add(
-                new Coordinate(
-                    projected.x,
-                    projected.y));
-        }
-
-        if (coordinates.Count < 2)
-        {
-            System.Diagnostics.Debug.WriteLine(
-                "DRAW RIDING SEGMENT: Fewer than 2 coordinates.");
-
-            return;
-        }
-
-        var lineString =
-            new LineString(
-                coordinates.ToArray());
-
-        var feature =
-            new GeometryFeature
-            {
-                Geometry = lineString
-            };
-
-        feature.Styles.Add(
-            new VectorStyle
-            {
-                Line =
-                    new Pen(
-                        Mapsui.Styles.Color.LightSkyBlue,
-                        7)
-            });
-
-        ridingLayer =
-            new MemoryLayer
-            {
-                Name = "Relevant Ride",
-
-                Features =
-                    new List<IFeature>
-                    {
-                        feature
-                    }
-            };
-
-        mapControl.Map?.Layers.Add(
-            ridingLayer);
-
-        System.Diagnostics.Debug.WriteLine(
-            "DRAW RIDING SEGMENT: Layer added.");
-    }
-
-    private MemoryLayer CreateWalkingLayer(
-        string name,
-        MPoint start,
-        MPoint end,
-        Mapsui.Styles.Color color)
-    {
-        var features =
-            new List<IFeature>();
-
-        double dx =
-            end.X -
-            start.X;
-
-        double dy =
-            end.Y -
-            start.Y;
-
-        double length =
-            Math.Sqrt(
-                dx * dx +
-                dy * dy);
-
-        if (length == 0)
-        {
-            return new MemoryLayer
-            {
-                Name = name,
-                Features = features
-            };
-        }
-
-        double unitX =
-            dx / length;
-
-        double unitY =
-            dy / length;
-
-        double dashLength = 12.0;
-        double gapLength = 8.0;
-
-        double currentDistance = 0;
-
-        while (currentDistance < length)
-        {
-            double segmentStart =
-                currentDistance;
-
-            double segmentEnd =
-                Math.Min(
-                    currentDistance +
-                    dashLength,
-                    length);
-
-            MPoint segmentStartPoint =
-                new(
-                    start.X +
-                    unitX * segmentStart,
-
-                    start.Y +
-                    unitY * segmentStart);
-
-            MPoint segmentEndPoint =
-                new(
-                    start.X +
-                    unitX * segmentEnd,
-
-                    start.Y +
-                    unitY * segmentEnd);
-
-            var coordinates =
-                new[]
-                {
-                    new Coordinate(
-                        segmentStartPoint.X,
-                        segmentStartPoint.Y),
-
-                    new Coordinate(
-                        segmentEndPoint.X,
-                        segmentEndPoint.Y)
-                };
-
-            var lineString =
-                new LineString(
-                    coordinates);
-
-            var feature =
-                new GeometryFeature
-                {
-                    Geometry =
-                        lineString
-                };
-
-            feature.Styles.Add(
-                new VectorStyle
-                {
-                    Line =
-                        new Pen(
-                            color,
-                            4)
-                });
-
-            features.Add(
-                feature);
-
-            currentDistance +=
-                dashLength +
-                gapLength;
-        }
-
-        return new MemoryLayer
-        {
-            Name = name,
-            Features = features
-        };
-    }
-
-    private void DisplayTripRoute(
-        Route route)
-    {
-        RemoveCurrentRouteLayers();
-
-        if (route.Stops.Count > 0)
-        {
-            stopLayer =
-                routeLayerFactory.CreateStopLayer(
-                    route.Stops);
-
-            mapControl.Map?.Layers.Add(
-                stopLayer);
-        }
-
-        CenterMapOnRoute();
-    }
-
-    private void RemoveTripLayers()
-    {
-        RemoveLayer(
-            ref fromWalkingLayer);
-
-        RemoveLayer(
-            ref toWalkingLayer);
-
-        RemoveLayer(
-            ref ridingLayer);
-    }
-
-    private void RemoveLayer(
-        ref MemoryLayer? layer)
-    {
-        if (layer == null)
-        {
-            return;
-        }
-
-        mapControl.Map?.Layers.Remove(
-            layer);
-
-        layer = null;
     }
 
     private void RoutePicker_SelectedIndexChanged(
@@ -839,98 +467,17 @@ public partial class MapPage : ContentPage
     private void DisplayDebugRoute(
         Route route)
     {
-        RemoveCurrentRouteLayers();
-
-        if (route.Stops.Count > 0)
-        {
-            stopLayer =
-                routeLayerFactory.CreateStopLayer(
-                    route.Stops);
-
-            mapControl.Map?.Layers.Add(
-                stopLayer);
-        }
-
-        CenterMapOnRoute();
+        routeDisplayService.DisplayRoute(
+            mapControl,
+            route,
+            fromPoint,
+            toPoint);
     }
 
     private void RemoveCurrentRouteLayers()
     {
-        if (inboundLayer != null)
-        {
-            mapControl.Map?.Layers.Remove(
-                inboundLayer);
-
-            inboundLayer = null;
-        }
-
-        if (outboundLayer != null)
-        {
-            mapControl.Map?.Layers.Remove(
-                outboundLayer);
-
-            outboundLayer = null;
-        }
-
-        if (stopLayer != null)
-        {
-            mapControl.Map?.Layers.Remove(
-                stopLayer);
-
-            stopLayer = null;
-        }
-
-        RemoveTripLayers();
-    }
-
-    private void CenterMapOnRoute()
-    {
-        MRect? combinedExtent = null;
-
-        if (stopLayer?.Extent != null)
-        {
-            combinedExtent =
-                stopLayer.Extent;
-        }
-
-        if (combinedExtent == null)
-        {
-            return;
-        }
-
-        double centerX =
-            (combinedExtent.MinX +
-             combinedExtent.MaxX) /
-            2.0;
-
-        double centerY =
-            (combinedExtent.MinY +
-             combinedExtent.MaxY) /
-            2.0;
-
-        MPoint center =
-            new(
-                centerX,
-                centerY);
-
-        double width =
-            combinedExtent.MaxX -
-            combinedExtent.MinX;
-
-        double height =
-            combinedExtent.MaxY -
-            combinedExtent.MinY;
-
-        double resolution =
-            Math.Max(
-                width,
-                height) /
-            800.0;
-
-        mapControl.Map?.Navigator
-            .CenterOnAndZoomTo(
-                center,
-                resolution);
+        routeDisplayService.RemoveCurrentRouteLayers(
+            mapControl);
     }
 
     private void BuildResponsiveLayout()
@@ -945,5 +492,4 @@ public partial class MapPage : ContentPage
                 toButton,
                 Width);
     }
-
 }
