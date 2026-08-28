@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.AddCategoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Add Category">
+
+    <VerticalStackLayout
+        Padding="20"
+        Spacing="16">
+
+        <Label
+            Text="Add Category"
+            FontSize="28"
+            FontAttributes="Bold" />
+
+        <Label
+            Text="Category name" />
+
+        <Entry
+            x:Name="NameEntry"
+            Placeholder="e.g. Museums" />
+
+        <Label
+            Text="Icon" />
+
+        <Entry
+            x:Name="IconEntry"
+            Placeholder="e.g. 🏛" />
+
+        <Label
+            Text="Display order" />
+
+        <Entry
+            x:Name="DisplayOrderEntry"
+            Keyboard="Numeric"
+            Placeholder="e.g. 1" />
+
+        <HorizontalStackLayout
+            Spacing="12">
+
+            <Label
+                Text="Enabled"
+                VerticalOptions="Center" />
+
+            <Switch
+                x:Name="EnabledSwitch"
+                IsToggled="True"
+                VerticalOptions="Center" />
+
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout
+            Spacing="12">
+
+            <Button
+                Text="Cancel"
+                Clicked="OnCancelClicked"
+                HorizontalOptions="FillAndExpand" />
+
+            <Button
+                Text="Save"
+                Clicked="OnSaveClicked"
+                HorizontalOptions="FillAndExpand" />
+
+        </HorizontalStackLayout>
+
+    </VerticalStackLayout>
+
+</ContentPage>

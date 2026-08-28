@@ -11,116 +11,94 @@ namespace LugarLang.Mobile.Services.RoutingVisualization;
 
 public class TripVisualizationService
 {
-    private MemoryLayer? fromWalkingLayer;
-    private MemoryLayer? toWalkingLayer;
-    private MemoryLayer? ridingLayer;
+    private readonly List<MemoryLayer> journeyLayers =
+        new();
 
-    public void DrawTrip(
+    public void DrawJourney(
         MapControl mapControl,
-        DirectionEvaluation evaluation)
+        Journey journey)
     {
-        RemoveTripLayers(mapControl);
+        RemoveTripLayers(
+            mapControl);
 
-        DrawWalkingConnections(
+        if (journey.Legs.Count == 0)
+        {
+            return;
+        }
+
+        foreach (
+            JourneyLeg leg
+            in journey.Legs)
+        {
+            DrawJourneyLeg(
+                mapControl,
+                leg);
+        }
+    }
+
+    public void RemoveTripLayers(
+        MapControl mapControl)
+    {
+        foreach (
+            MemoryLayer layer
+            in journeyLayers)
+        {
+            mapControl.Map?.Layers.Remove(
+                layer);
+        }
+
+        journeyLayers.Clear();
+    }
+
+    private void DrawJourneyLeg(
+        MapControl mapControl,
+        JourneyLeg leg)
+    {
+        DirectionEvaluation evaluation =
+            leg.Evaluation;
+
+        DrawWalkingConnection(
             mapControl,
             evaluation.From,
-            evaluation.To,
-            evaluation.NearestFrom,
-            evaluation.NearestTo);
+            evaluation.NearestFrom);
 
         DrawRidingSegment(
             mapControl,
             evaluation.Direction.Path,
             evaluation.FromIndex,
             evaluation.ToIndex);
+
+        DrawWalkingConnection(
+            mapControl,
+            evaluation.NearestTo,
+            evaluation.To);
     }
 
-    public void RemoveTripLayers(
-        MapControl mapControl)
-    {
-        RemoveLayer(
-            mapControl,
-            ref fromWalkingLayer);
-
-        RemoveLayer(
-            mapControl,
-            ref toWalkingLayer);
-
-        RemoveLayer(
-            mapControl,
-            ref ridingLayer);
-    }
-
-    private void DrawWalkingConnections(
+    private void DrawWalkingConnection(
         MapControl mapControl,
-        GeoPoint from,
-        GeoPoint to,
-        GeoPoint nearestFrom,
-        GeoPoint nearestTo)
+        GeoPoint start,
+        GeoPoint end)
     {
-        var fromProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    from.Longitude,
-                    from.Latitude);
+        MPoint startPoint =
+            Project(
+                start);
 
-        var toProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    to.Longitude,
-                    to.Latitude);
+        MPoint endPoint =
+            Project(
+                end);
 
-        var nearestFromProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    nearestFrom.Longitude,
-                    nearestFrom.Latitude);
-
-        var nearestToProjected =
-            Mapsui.Projections.SphericalMercator
-                .FromLonLat(
-                    nearestTo.Longitude,
-                    nearestTo.Latitude);
-
-        MPoint fromMapPoint =
-            new(
-                fromProjected.x,
-                fromProjected.y);
-
-        MPoint toMapPoint =
-            new(
-                toProjected.x,
-                toProjected.y);
-
-        MPoint nearestFromMapPoint =
-            new(
-                nearestFromProjected.x,
-                nearestFromProjected.y);
-
-        MPoint nearestToMapPoint =
-            new(
-                nearestToProjected.x,
-                nearestToProjected.y);
-
-        fromWalkingLayer =
+        MemoryLayer layer =
             CreateWalkingLayer(
-                "Walking From",
-                fromMapPoint,
-                nearestFromMapPoint,
+                "Walking Connection",
+                startPoint,
+                endPoint,
                 Mapsui.Styles.Color.Green);
 
-        toWalkingLayer =
-            CreateWalkingLayer(
-                "Walking To",
-                nearestToMapPoint,
-                toMapPoint,
-                Mapsui.Styles.Color.Orange);
+        journeyLayers.Add(
+            layer);
 
         mapControl.Map?.Layers.Add(
-            fromWalkingLayer);
-
-        mapControl.Map?.Layers.Add(
-            toWalkingLayer);
+            layer);
     }
 
     private void DrawRidingSegment(
@@ -137,24 +115,22 @@ public class TripVisualizationService
             return;
         }
 
-        var coordinates =
-            new List<Coordinate>();
+        List<Coordinate> coordinates =
+            new();
 
         for (
             int i = fromIndex;
             i <= toIndex;
             i++)
         {
-            var projected =
-                Mapsui.Projections.SphericalMercator
-                    .FromLonLat(
-                        path[i].Longitude,
-                        path[i].Latitude);
+            MPoint projected =
+                Project(
+                    path[i]);
 
             coordinates.Add(
                 new Coordinate(
-                    projected.x,
-                    projected.y));
+                    projected.X,
+                    projected.Y));
         }
 
         if (coordinates.Count < 2)
@@ -162,14 +138,15 @@ public class TripVisualizationService
             return;
         }
 
-        var lineString =
-            new LineString(
+        LineString lineString =
+            new(
                 coordinates.ToArray());
 
-        var feature =
-            new GeometryFeature
+        GeometryFeature feature =
+            new()
             {
-                Geometry = lineString
+                Geometry =
+                    lineString
             };
 
         feature.Styles.Add(
@@ -181,10 +158,11 @@ public class TripVisualizationService
                         7)
             });
 
-        ridingLayer =
-            new MemoryLayer
+        MemoryLayer layer =
+            new()
             {
-                Name = "Relevant Ride",
+                Name =
+                    "Relevant Ride",
 
                 Features =
                     new List<IFeature>
@@ -193,8 +171,11 @@ public class TripVisualizationService
                     }
             };
 
+        journeyLayers.Add(
+            layer);
+
         mapControl.Map?.Layers.Add(
-            ridingLayer);
+            layer);
     }
 
     private MemoryLayer CreateWalkingLayer(
@@ -203,8 +184,8 @@ public class TripVisualizationService
         MPoint end,
         Mapsui.Styles.Color color)
     {
-        var features =
-            new List<IFeature>();
+        List<IFeature> features =
+            new();
 
         double dx =
             end.X -
@@ -223,8 +204,11 @@ public class TripVisualizationService
         {
             return new MemoryLayer
             {
-                Name = name,
-                Features = features
+                Name =
+                    name,
+
+                Features =
+                    features
             };
         }
 
@@ -234,12 +218,17 @@ public class TripVisualizationService
         double unitY =
             dy / length;
 
-        double dashLength = 12.0;
-        double gapLength = 8.0;
+        const double dashLength =
+            12.0;
 
-        double currentDistance = 0;
+        const double gapLength =
+            8.0;
 
-        while (currentDistance < length)
+        double currentDistance =
+            0;
+
+        while (
+            currentDistance < length)
         {
             double segmentStart =
                 currentDistance;
@@ -264,24 +253,21 @@ public class TripVisualizationService
                     start.Y +
                     unitY * segmentEnd);
 
-            var coordinates =
-                new[]
-                {
-                    new Coordinate(
-                        segmentStartPoint.X,
-                        segmentStartPoint.Y),
+            LineString lineString =
+                new(
+                    new[]
+                    {
+                        new Coordinate(
+                            segmentStartPoint.X,
+                            segmentStartPoint.Y),
 
-                    new Coordinate(
-                        segmentEndPoint.X,
-                        segmentEndPoint.Y)
-                };
+                        new Coordinate(
+                            segmentEndPoint.X,
+                            segmentEndPoint.Y)
+                    });
 
-            var lineString =
-                new LineString(
-                    coordinates);
-
-            var feature =
-                new GeometryFeature
+            GeometryFeature feature =
+                new()
                 {
                     Geometry =
                         lineString
@@ -306,26 +292,25 @@ public class TripVisualizationService
 
         return new MemoryLayer
         {
-            Name = name,
-            Features = features
+            Name =
+                name,
+
+            Features =
+                features
         };
     }
 
-    private void RemoveLayer(
-        MapControl mapControl,
-        ref MemoryLayer? layer)
+    private MPoint Project(
+        GeoPoint point)
     {
-        if (layer == null)
-        {
-            return;
-        }
+        var projected =
+            Mapsui.Projections.SphericalMercator
+                .FromLonLat(
+                    point.Longitude,
+                    point.Latitude);
 
-        mapControl.Map?.Layers.Remove(
-            layer);
-
-        layer = null;
+        return new MPoint(
+            projected.x,
+            projected.y);
     }
 }
-
-
-

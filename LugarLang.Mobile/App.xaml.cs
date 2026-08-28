@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using LugarLang.Mobile.Pages;
 
 namespace LugarLang.Mobile
 {
@@ -9,9 +9,11 @@ namespace LugarLang.Mobile
             InitializeComponent();
         }
 
-        protected override Window CreateWindow(IActivationState? activationState)
+        protected override Window CreateWindow(
+            IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            return new Window(
+                new StartupPage());
         }
     }
 }

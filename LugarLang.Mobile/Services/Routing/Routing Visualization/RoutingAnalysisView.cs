@@ -24,8 +24,6 @@ public class RoutingAnalysisView : ContentView
     public void Display(
         RoutingDebugSnapshot snapshot)
     {
-        candidateView.Display(
-            snapshot);
     }
 
     private void CandidateView_CandidateSelected(

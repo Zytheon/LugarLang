@@ -1,0 +1,65 @@
+<ContentView
+    x:Class="LugarLang.Mobile.Controls.Developer.DeveloperLauncher"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    HorizontalOptions="End"
+    VerticalOptions="End">
+
+    <Grid
+        HorizontalOptions="End"
+        VerticalOptions="End">
+
+        <Button
+            x:Name="DeveloperButton"
+            InputTransparent="False"
+            IsVisible="True"
+            Text="🔧"
+            WidthRequest="56"
+            HeightRequest="56"
+            CornerRadius="28"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Clicked="OnDeveloperButtonClicked" />
+
+        <Border
+            x:Name="DeveloperMenu"
+            IsVisible="False"
+            BackgroundColor="{AppThemeBinding Light=White, Dark=#202020}"
+            Stroke="Black"
+            StrokeThickness="2"
+            Padding="12"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,0,68">
+
+            <VerticalStackLayout
+                Spacing="8">
+
+                <Label
+                    Text="Developer Tools"
+                    FontSize="18"
+                    FontAttributes="Bold" />
+
+                <Button
+                    Text="＋ Add UI Element"
+                    Clicked="OnAddUIElementClicked" />
+
+                <Button
+                    Text="✎ Edit UI"
+                    Clicked="OnEditUIClicked" />
+
+                <Button
+                    Text="🗂 Multi-UI Edit"
+                    Clicked="OnMultiUIEditClicked" />
+
+                <Button
+                    Text="💾 Commit"
+                    Clicked="OnCommitClicked" />
+
+            </VerticalStackLayout>
+
+        </Border>
+
+    </Grid>
+
+</ContentView>

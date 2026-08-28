@@ -1,10 +1,36 @@
-﻿namespace LugarLang.Mobile
+﻿using LugarLang.Mobile.Services.Developer;
+
+namespace LugarLang.Mobile;
+
+public partial class AppShell : Shell
 {
-    public partial class AppShell : Shell
+    private readonly DeveloperOverlayManager
+        developerOverlayManager;
+
+    public AppShell(
+        DeveloperOverlayManager
+            developerOverlayManager)
     {
-        public AppShell()
+        InitializeComponent();
+
+        this.developerOverlayManager =
+            developerOverlayManager;
+    }
+
+    protected override void OnNavigated(
+        ShellNavigatedEventArgs args)
+    {
+        base.OnNavigated(args);
+
+        if (CurrentState.Location
+            .OriginalString
+            .Contains("DiscoverPage"))
         {
-            InitializeComponent();
+            if (CurrentPage
+                is Pages.DiscoverPage discoverPage)
+            {
+                discoverPage.Refresh();
+            }
         }
     }
 }

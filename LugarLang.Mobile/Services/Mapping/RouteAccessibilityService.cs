@@ -1,10 +1,20 @@
 ﻿using CdoGtfsConverter.Models;
+using LugarLang.Mobile.Services.RoutingSpatial;
 
 namespace LugarLang.Mobile.Services.Mapping;
 
 public class RouteAccessibilityService
 {
     private const double EarthRadiusMeters = 6371000.0;
+
+    private readonly RouteGeometryIndex geometryIndex;
+
+    public RouteAccessibilityService(
+        RouteGeometryIndex geometryIndex)
+    {
+        this.geometryIndex =
+            geometryIndex;
+    }
 
     public RouteAccessResult FindNearestPoint(
         double latitude,
@@ -18,8 +28,11 @@ public class RouteAccessibilityService
         {
             return new RouteAccessResult
             {
-                DistanceMeters = double.MaxValue,
-                NearestPoint = null
+                DistanceMeters =
+                    double.MaxValue,
+
+                NearestPoint =
+                    null
             };
         }
 
@@ -34,23 +47,35 @@ public class RouteAccessibilityService
                         points[0].Latitude,
                         points[0].Longitude),
 
-                NearestPoint = new GeoPoint
-                {
-                    Latitude = points[0].Latitude,
-                    Longitude = points[0].Longitude
-                }
+                NearestPoint =
+                    new GeoPoint
+                    {
+                        Latitude =
+                            points[0].Latitude,
+
+                        Longitude =
+                            points[0].Longitude
+                    }
             };
         }
 
         double bestDistance =
             double.MaxValue;
 
-        GeoPoint? bestPoint = null;
+        GeoPoint? bestPoint =
+            null;
 
-        for (int i = 0; i < points.Count - 1; i++)
+
+        for (
+            int i = 0;
+            i < points.Count - 1;
+            i++)
         {
-            GeoPoint a = points[i];
-            GeoPoint b = points[i + 1];
+            GeoPoint a =
+                points[i];
+
+            GeoPoint b =
+                points[i + 1];
 
             GeoPoint candidate =
                 FindNearestPointOnSegment(
@@ -68,15 +93,170 @@ public class RouteAccessibilityService
 
             if (distance < bestDistance)
             {
-                bestDistance = distance;
-                bestPoint = candidate;
+                bestDistance =
+                    distance;
+
+                bestPoint =
+                    candidate;
+
+  
             }
         }
 
         return new RouteAccessResult
         {
-            DistanceMeters = bestDistance,
-            NearestPoint = bestPoint
+            DistanceMeters =
+                bestDistance,
+
+            NearestPoint =
+                bestPoint,
+
+
+        };
+    }
+
+    public RouteAccessResult FindNearestPointIndexed(
+        double latitude,
+        double longitude,
+        double searchRadiusMeters)
+    {
+        IReadOnlyList<IndexedSegment> nearbySegments =
+            geometryIndex.FindNearbySegments(
+                latitude,
+                longitude,
+                searchRadiusMeters);
+
+        if (nearbySegments.Count == 0)
+        {
+            return new RouteAccessResult
+            {
+                DistanceMeters =
+                    double.MaxValue,
+
+                NearestPoint =
+                    null
+            };
+        }
+
+        double bestDistance =
+            double.MaxValue;
+
+        GeoPoint? bestPoint =
+            null;
+
+        int bestSegmentIndex =
+            -1;
+
+        foreach (
+            IndexedSegment segment
+            in nearbySegments)
+        {
+            GeoPoint candidate =
+                FindNearestPointOnSegment(
+                    latitude,
+                    longitude,
+                    segment.Start,
+                    segment.End);
+
+            double distance =
+                CalculateDistanceMeters(
+                    latitude,
+                    longitude,
+                    candidate.Latitude,
+                    candidate.Longitude);
+
+            if (distance < bestDistance)
+            {
+                bestDistance =
+                    distance;
+
+                bestPoint =
+                    candidate;
+
+                bestSegmentIndex =
+                    segment.SegmentIndex;
+            }
+        }
+
+        return new RouteAccessResult
+        {
+            DistanceMeters =
+                bestDistance,
+
+            NearestPoint =
+                bestPoint,
+
+            SegmentIndex =
+                bestSegmentIndex
+        };
+    }
+
+    public RouteAccessResult FindNearestPointIndexed(
+    Direction direction,
+    double latitude,
+    double longitude,
+    double searchRadiusMeters)
+    {
+        IReadOnlyList<IndexedSegment> nearbySegments =
+            geometryIndex.FindNearbySegments(
+                direction,
+                latitude,
+                longitude,
+                searchRadiusMeters);
+
+        if (nearbySegments.Count == 0)
+        {
+            return new RouteAccessResult
+            {
+                DistanceMeters =
+                    double.MaxValue,
+
+                NearestPoint =
+                    null
+            };
+        }
+
+        double bestDistance =
+            double.MaxValue;
+
+        GeoPoint? bestPoint =
+            null;
+
+        foreach (
+            IndexedSegment segment
+            in nearbySegments)
+        {
+            GeoPoint candidate =
+                FindNearestPointOnSegment(
+                    latitude,
+                    longitude,
+                    segment.Start,
+                    segment.End);
+
+            double distance =
+                CalculateDistanceMeters(
+                    latitude,
+                    longitude,
+                    candidate.Latitude,
+                    candidate.Longitude);
+
+            if (distance < bestDistance)
+            {
+                bestDistance =
+                    distance;
+
+                bestPoint =
+                    candidate;
+            }
+        }
+
+        return new RouteAccessResult
+        {
+            DistanceMeters =
+                bestDistance,
+
+            NearestPoint =
+                bestPoint
         };
     }
 
@@ -87,44 +267,56 @@ public class RouteAccessibilityService
         GeoPoint b)
     {
         double referenceLatitude =
-            latitude * Math.PI / 180.0;
+            latitude *
+            Math.PI /
+            180.0;
 
         double scale =
-            Math.Cos(referenceLatitude);
+            Math.Cos(
+                referenceLatitude);
 
         double ax =
-            a.Longitude * scale;
+            a.Longitude *
+            scale;
 
         double ay =
             a.Latitude;
 
         double bx =
-            b.Longitude * scale;
+            b.Longitude *
+            scale;
 
         double by =
             b.Latitude;
 
         double px =
-            longitude * scale;
+            longitude *
+            scale;
 
         double py =
             latitude;
 
         double dx =
-            bx - ax;
+            bx -
+            ax;
 
         double dy =
-            by - ay;
+            by -
+            ay;
 
         double lengthSquared =
-            dx * dx + dy * dy;
+            dx * dx +
+            dy * dy;
 
         if (lengthSquared == 0)
         {
             return new GeoPoint
             {
-                Latitude = a.Latitude,
-                Longitude = a.Longitude
+                Latitude =
+                    a.Latitude,
+
+                Longitude =
+                    a.Longitude
             };
         }
 
@@ -133,22 +325,28 @@ public class RouteAccessibilityService
              (py - ay) * dy) /
             lengthSquared;
 
-        t = Math.Max(
-            0,
-            Math.Min(
-                1,
-                t));
+        t =
+            Math.Max(
+                0,
+                Math.Min(
+                    1,
+                    t));
 
         double nearestX =
-            ax + t * dx;
+            ax +
+            t * dx;
 
         double nearestY =
-            ay + t * dy;
+            ay +
+            t * dy;
 
         return new GeoPoint
         {
-            Latitude = nearestY,
-            Longitude = nearestX / scale
+            Latitude =
+                nearestY,
+
+            Longitude =
+                nearestX / scale
         };
     }
 
@@ -159,27 +357,37 @@ public class RouteAccessibilityService
         double longitude2)
     {
         double lat1 =
-            latitude1 * Math.PI / 180.0;
+            latitude1 *
+            Math.PI /
+            180.0;
 
         double lat2 =
-            latitude2 * Math.PI / 180.0;
+            latitude2 *
+            Math.PI /
+            180.0;
 
         double deltaLat =
             (latitude2 - latitude1) *
-            Math.PI / 180.0;
+            Math.PI /
+            180.0;
 
         double deltaLon =
             (longitude2 - longitude1) *
-            Math.PI / 180.0;
+            Math.PI /
+            180.0;
 
         double a =
-            Math.Sin(deltaLat / 2) *
-            Math.Sin(deltaLat / 2) +
+            Math.Sin(
+                deltaLat / 2) *
+            Math.Sin(
+                deltaLat / 2) +
 
             Math.Cos(lat1) *
             Math.Cos(lat2) *
-            Math.Sin(deltaLon / 2) *
-            Math.Sin(deltaLon / 2);
+            Math.Sin(
+                deltaLon / 2) *
+            Math.Sin(
+                deltaLon / 2);
 
         double c =
             2 *
@@ -187,7 +395,9 @@ public class RouteAccessibilityService
                 Math.Sqrt(a),
                 Math.Sqrt(1 - a));
 
-        return EarthRadiusMeters * c;
+        return
+            EarthRadiusMeters *
+            c;
     }
 }
 
@@ -196,6 +406,6 @@ public class RouteAccessResult
     public double DistanceMeters { get; set; }
 
     public GeoPoint? NearestPoint { get; set; }
+
+    public int SegmentIndex { get; set; } = -1;
 }
-
-

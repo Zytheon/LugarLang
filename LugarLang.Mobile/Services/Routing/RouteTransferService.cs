@@ -1,5 +1,6 @@
 ﻿using CdoGtfsConverter.Models;
 using LugarLang.Mobile.Services.Mapping;
+using LugarLang.Mobile.Services.RoutingSpatial;
 
 namespace LugarLang.Mobile.Services.Routing;
 
@@ -8,12 +9,24 @@ public class RouteTransferService
     private readonly RouteAccessibilityService
         routeAccessibilityService;
 
+    private readonly RouteGeometryIndex
+        geometryIndex;
+    private readonly Dictionary<Direction, double[]>
+    cumulativeDistanceCache =
+        new();
+
     public RouteTransferService(
-        RouteAccessibilityService routeAccessibilityService)
+        RouteAccessibilityService routeAccessibilityService,
+        RouteGeometryIndex geometryIndex)
     {
         this.routeAccessibilityService =
             routeAccessibilityService;
+
+        this.geometryIndex =
+            geometryIndex;
     }
+
+    
 
     public List<TransferPoint> FindTransferPoints(
         Direction firstDirection,
@@ -32,19 +45,32 @@ public class RouteTransferService
             return transfers;
         }
 
-        for (
-            int firstIndex = 0;
-            firstIndex < firstDirection.Path.Count;
-            firstIndex++)
+        double[] firstCumulativeDistances =
+            GetCumulativeDistances(
+                firstDirection);
+
+        double[] secondCumulativeDistances =
+            GetCumulativeDistances(
+                secondDirection);
+
+        List<int> sampledIndices =
+            BuildSampledPathIndices(
+                firstDirection.Path,
+                25.0);
+
+        foreach (
+            int firstIndex
+            in sampledIndices)
         {
             GeoPoint firstPoint =
                 firstDirection.Path[firstIndex];
 
             RouteAccessResult nearestSecond =
-                routeAccessibilityService.FindNearestPoint(
+                routeAccessibilityService.FindNearestPointIndexed(
+                    secondDirection,
                     firstPoint.Latitude,
                     firstPoint.Longitude,
-                    secondDirection.Path);
+                    maximumTransferWalkingDistanceMeters);
 
             if (
                 nearestSecond.NearestPoint == null)
@@ -60,21 +86,22 @@ public class RouteTransferService
             }
 
             int secondIndex =
-                FindNearestPathIndex(
-                    nearestSecond.NearestPoint,
-                    secondDirection.Path);
+                nearestSecond.SegmentIndex;
+
+            if (
+                secondIndex < 0 ||
+                secondIndex >= secondDirection.Path.Count)
+            {
+                continue;
+            }
 
             double firstDistance =
-                CalculatePathDistance(
-                    firstDirection.Path,
-                    0,
-                    firstIndex);
+                firstCumulativeDistances[
+                    firstIndex];
 
             double secondDistance =
-                CalculatePathDistance(
-                    secondDirection.Path,
-                    0,
-                    secondIndex);
+                secondCumulativeDistances[
+                    secondIndex];
 
             transfers.Add(
                 new TransferPoint
@@ -104,9 +131,19 @@ public class RouteTransferService
     }
 
     private List<TransferPoint>
-        RemoveDuplicateTransfers(
-            List<TransferPoint> transfers)
+    RemoveDuplicateTransfers(
+        List<TransferPoint> transfers)
     {
+        const double duplicateDistanceMeters =
+            25.0;
+
+        const double cellSizeMeters =
+            25.0;
+
+        Dictionary<(int X, int Y), List<TransferPoint>>
+            grid =
+                new();
+
         List<TransferPoint> result =
             new();
 
@@ -114,93 +151,214 @@ public class RouteTransferService
             TransferPoint transfer
             in transfers)
         {
-            bool duplicate =
-                result.Any(
-                    existing =>
-                        CalculateDistanceMeters(
-                            existing.Location.Latitude,
-                            existing.Location.Longitude,
-                            transfer.Location.Latitude,
-                            transfer.Location.Longitude)
-                        < 25.0);
+            double latitude =
+                transfer.Location.Latitude;
 
-            if (!duplicate)
+            double longitude =
+                transfer.Location.Longitude;
+
+            double latitudeMeters =
+                latitude *
+                111320.0;
+
+            double longitudeMeters =
+                longitude *
+                111320.0 *
+                Math.Cos(
+                    DegreesToRadians(
+                        latitude));
+
+            int cellX =
+                (int)Math.Floor(
+                    longitudeMeters /
+                    cellSizeMeters);
+
+            int cellY =
+                (int)Math.Floor(
+                    latitudeMeters /
+                    cellSizeMeters);
+
+            bool duplicate = false;
+
+            for (
+                int offsetX = -1;
+                offsetX <= 1;
+                offsetX++)
             {
-                result.Add(
-                    transfer);
+                for (
+                    int offsetY = -1;
+                    offsetY <= 1;
+                    offsetY++)
+                {
+                    int neighborX =
+                        cellX + offsetX;
+
+                    int neighborY =
+                        cellY + offsetY;
+
+                    if (
+                        !grid.TryGetValue(
+                            (neighborX, neighborY),
+                            out List<TransferPoint>? nearbyTransfers))
+                    {
+                        continue;
+                    }
+
+                    foreach (
+                        TransferPoint existing
+                        in nearbyTransfers)
+                    {
+                        double distance =
+                            CalculateDistanceMeters(
+                                existing.Location.Latitude,
+                                existing.Location.Longitude,
+                                latitude,
+                                longitude);
+
+                        if (
+                            distance <
+                            duplicateDistanceMeters)
+                        {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+
+                    if (duplicate)
+                    {
+                        break;
+                    }
+                }
+
+                if (duplicate)
+                {
+                    break;
+                }
             }
+
+            if (duplicate)
+            {
+                continue;
+            }
+
+            result.Add(
+                transfer);
+
+            if (
+                !grid.TryGetValue(
+                    (cellX, cellY),
+                    out List<TransferPoint>? cell))
+            {
+                cell =
+                    new List<TransferPoint>();
+
+                grid[
+                    (cellX, cellY)] =
+                    cell;
+            }
+
+            cell.Add(
+                transfer);
         }
 
         return result;
     }
 
-    private int FindNearestPathIndex(
-        GeoPoint point,
-        IList<GeoPoint> path)
+    private List<int> BuildSampledPathIndices(
+     IList<GeoPoint> path,
+     double sampleSpacingMeters)
     {
-        double smallestDistance =
-            double.MaxValue;
+        List<int> indices =
+            new();
 
-        int nearestIndex = 0;
+        if (path.Count == 0)
+        {
+            return indices;
+        }
+
+        indices.Add(0);
+
+        double distanceSinceLastSample = 0;
 
         for (
-            int i = 0;
+            int i = 1;
             i < path.Count;
             i++)
         {
-            double distance =
+            distanceSinceLastSample +=
                 CalculateDistanceMeters(
-                    point.Latitude,
-                    point.Longitude,
+                    path[i - 1].Latitude,
+                    path[i - 1].Longitude,
                     path[i].Latitude,
                     path[i].Longitude);
 
             if (
-                distance <
-                smallestDistance)
+                distanceSinceLastSample >=
+                sampleSpacingMeters)
             {
-                smallestDistance =
-                    distance;
+                indices.Add(i);
 
-                nearestIndex =
-                    i;
+                distanceSinceLastSample = 0;
             }
         }
 
-        return nearestIndex;
+        if (
+            indices[indices.Count - 1] !=
+            path.Count - 1)
+        {
+            indices.Add(
+                path.Count - 1);
+        }
+
+        return indices;
     }
 
-    private double CalculatePathDistance(
-        IList<GeoPoint> path,
-        int fromIndex,
-        int toIndex)
+    private double[] GetCumulativeDistances(
+    Direction direction)
     {
         if (
-            path.Count < 2 ||
-            fromIndex < 0 ||
-            toIndex >= path.Count ||
-            toIndex <= fromIndex)
+            cumulativeDistanceCache.TryGetValue(
+                direction,
+                out double[]? cachedDistances))
         {
-            return 0;
+            return cachedDistances;
         }
 
-        double totalDistance = 0;
+        double[] distances =
+            BuildCumulativeDistances(
+                direction.Path);
+
+        cumulativeDistanceCache[
+            direction] =
+            distances;
+
+        return distances;
+    }
+
+    private double[] BuildCumulativeDistances(
+    IList<GeoPoint> path)
+    {
+        double[] distances =
+            new double[path.Count];
 
         for (
-            int i = fromIndex;
-            i < toIndex;
+            int i = 1;
+            i < path.Count;
             i++)
         {
-            totalDistance +=
+            distances[i] =
+                distances[i - 1] +
                 CalculateDistanceMeters(
+                    path[i - 1].Latitude,
+                    path[i - 1].Longitude,
                     path[i].Latitude,
-                    path[i].Longitude,
-                    path[i + 1].Latitude,
-                    path[i + 1].Longitude);
+                    path[i].Longitude);
         }
 
-        return totalDistance;
+        return distances;
     }
+
+
 
     private double CalculateDistanceMeters(
         double lat1,
@@ -248,4 +406,7 @@ public class RouteTransferService
                Math.PI /
                180.0;
     }
+
+
 }
+

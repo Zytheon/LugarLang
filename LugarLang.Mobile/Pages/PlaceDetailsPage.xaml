@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.PlaceDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Place">
+
+    <ScrollView>
+
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="20">
+
+            <Image
+                x:Name="PlacePhoto"
+                HeightRequest="240"
+                Aspect="AspectFill" />
+
+            <Label
+                x:Name="PlaceNameLabel"
+                FontSize="30"
+                FontAttributes="Bold" />
+
+            <Label
+                x:Name="PlaceDescriptionLabel"
+                FontSize="17" />
+
+            <!-- Contacts -->
+
+            <VerticalStackLayout
+                Spacing="10">
+
+                <Label
+                    Text="Contact"
+                    FontSize="22"
+                    FontAttributes="Bold" />
+
+                <Button
+                    x:Name="PhoneButton"
+                    Text="📞 Phone"
+                    Clicked="OnPhoneClicked" />
+
+                <Button
+                    x:Name="FacebookButton"
+                    Text="Facebook"
+                    Clicked="OnFacebookClicked" />
+
+                <Button
+                    x:Name="InstagramButton"
+                    Text="Instagram"
+                    Clicked="OnInstagramClicked" />
+
+                <Button
+                    x:Name="WhatsAppButton"
+                    Text="WhatsApp"
+                    Clicked="OnWhatsAppClicked" />
+
+            </VerticalStackLayout>
+
+            <!-- Payments -->
+
+            <VerticalStackLayout
+                Spacing="10">
+
+                <Label
+                    Text="Payment"
+                    FontSize="22"
+                    FontAttributes="Bold" />
+
+                <Label
+                    Text="GCash"
+                    FontAttributes="Bold" />
+
+                <Image
+                    x:Name="GcashQrImage"
+                    HeightRequest="220"
+                    Aspect="AspectFit" />
+
+                <Label
+                    Text="Maya"
+                    FontAttributes="Bold" />
+
+                <Image
+                    x:Name="MayaQrImage"
+                    HeightRequest="220"
+                    Aspect="AspectFit" />
+
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>

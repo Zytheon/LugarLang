@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.PlaceEditPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Edit Place">
+
+    <ScrollView>
+
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="20">
+
+            <Label
+                Text="Edit Place"
+                FontSize="32"
+                FontAttributes="Bold" />
+
+            <!-- Name -->
+
+            <VerticalStackLayout
+                Spacing="8">
+
+                <Label
+                    Text="Name"
+                    FontSize="18"
+                    FontAttributes="Bold" />
+
+                <Entry
+                    x:Name="NameEntry"
+                    Placeholder="Place name" />
+
+            </VerticalStackLayout>
+
+            <!-- Photo -->
+
+            <VerticalStackLayout
+    Spacing="8">
+
+                <Label
+        Text="Photo"
+        FontSize="18"
+        FontAttributes="Bold" />
+
+                <Image
+        x:Name="PlacePhotoPreview"
+        HeightRequest="180"
+        Aspect="AspectFill" />
+
+                <Button
+        Text="Add Photo"
+        Clicked="OnAddPhotoClicked" />
+
+            </VerticalStackLayout>
+
+            <!-- Contacts -->
+
+            <VerticalStackLayout
+                Spacing="12">
+
+                <Label
+                    Text="Contacts"
+                    FontSize="18"
+                    FontAttributes="Bold" />
+
+                <Entry
+                    x:Name="FacebookEntry"
+                    Placeholder="Facebook" />
+
+                <Entry
+                    x:Name="InstagramEntry"
+                    Placeholder="Instagram" />
+
+                <Entry
+                    x:Name="WhatsAppEntry"
+                    Placeholder="WhatsApp" />
+
+                <Entry
+                    x:Name="PhoneNumberEntry"
+                    Placeholder="Phone number"
+                    Keyboard="Telephone" />
+
+                
+
+            </VerticalStackLayout>
+
+            <Label
+    Text="Region" />
+
+            <Entry
+    x:Name="RegionEntry"
+    Placeholder="e.g. Northern Mindanao" />
+
+            <!-- Payments -->
+
+            <VerticalStackLayout
+    Spacing="12">
+
+                <Label
+        Text="Payments"
+        FontSize="18"
+        FontAttributes="Bold" />
+
+                <Label
+        Text="GCash QR"
+        FontAttributes="Bold" />
+
+                <Image
+        x:Name="GcashQrPreview"
+        HeightRequest="180"
+        Aspect="AspectFit" />
+
+                <Button
+        Text="Add GCash QR"
+        Clicked="OnAddGcashQrClicked" />
+
+                <Label
+        Text="Maya QR"
+        FontAttributes="Bold" />
+
+                <Image
+        x:Name="MayaQrPreview"
+        HeightRequest="180"
+        Aspect="AspectFit" />
+
+                <Button
+        Text="Add Maya QR"
+        Clicked="OnAddMayaQrClicked" />
+
+            </VerticalStackLayout>
+
+            <!-- Description -->
+
+            <VerticalStackLayout
+                Spacing="8">
+
+                <Label
+                    Text="Description"
+                    FontSize="18"
+                    FontAttributes="Bold" />
+
+                <Editor
+                    x:Name="DescriptionEditor"
+                    Placeholder="Add a description..."
+                    AutoSize="TextChanges"
+                    MinimumHeightRequest="150" />
+
+            </VerticalStackLayout>
+
+            <Button
+                Text="Save"
+                FontSize="18"
+                HeightRequest="55"
+                Clicked="OnSaveClicked" />
+
+            <Button
+                Text="Cancel"
+                FontSize="18"
+                HeightRequest="55"
+                Clicked="OnCancelClicked" />
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.EditCategoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Edit Category">
+
+    <ScrollView>
+
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="16">
+
+            <Label
+                Text="Edit Category"
+                FontSize="28"
+                FontAttributes="Bold" />
+
+            <Label
+                Text="Category name" />
+
+            <Entry
+                x:Name="NameEntry"
+                Placeholder="e.g. Foods" />
+
+
+            <Label
+                Text="Icon" />
+
+            <Entry
+                x:Name="IconEntry"
+                Placeholder="e.g. 🍽" />
+
+            <Label
+                Text="Display order" />
+
+            <Entry
+                x:Name="DisplayOrderEntry"
+                Keyboard="Numeric"
+                Placeholder="e.g. 1" />
+
+            <HorizontalStackLayout
+                Spacing="12">
+
+                <Label
+                    Text="Enabled"
+                    VerticalOptions="Center" />
+
+                <Switch
+                    x:Name="EnabledSwitch"
+                    VerticalOptions="Center" />
+
+            </HorizontalStackLayout>
+
+            <BoxView
+                HeightRequest="1" />
+
+            <Label
+                Text="Carousel Tiles"
+                FontSize="22"
+                FontAttributes="Bold" />
+
+            <CollectionView
+                x:Name="PlaceCollectionView"
+                SelectionMode="None">
+
+                <CollectionView.ItemTemplate>
+
+                    <DataTemplate>
+
+                        <Grid
+                            Padding="8"
+                            ColumnDefinitions="*,Auto,Auto"
+                            ColumnSpacing="8">
+
+                            <Label
+                                Text="{Binding Name}"
+                                FontSize="17"
+                                VerticalOptions="Center" />
+
+                            <Button
+                                Grid.Column="1"
+                                Text="✎"
+                                Clicked="OnEditPlaceClicked" />
+
+                            <Button
+                                Grid.Column="2"
+                                Text="🗑"
+                                Clicked="OnDeletePlaceClicked" />
+
+                        </Grid>
+
+                    </DataTemplate>
+
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
+
+            <Button
+                Text="+ Add Tile"
+                HeightRequest="50"
+                Clicked="OnAddPlaceClicked" />
+
+            <HorizontalStackLayout
+                Spacing="12">
+
+                <Button
+                    Text="Cancel"
+                    Clicked="OnCancelClicked"
+                    HorizontalOptions="FillAndExpand" />
+
+                <Button
+                    Text="Save"
+                    Clicked="OnSaveClicked"
+                    HorizontalOptions="FillAndExpand" />
+
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>

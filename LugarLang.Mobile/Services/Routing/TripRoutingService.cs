@@ -160,18 +160,19 @@ public class TripRoutingService
         {
             return null;
         }
-
         RouteAccessResult fromResult =
-            routeAccessibilityService.FindNearestPoint(
+            routeAccessibilityService.FindNearestPointIndexed(
+                direction,
                 from.Latitude,
                 from.Longitude,
-                direction.Path);
+                maximumWalkingDistanceMeters);
 
         RouteAccessResult toResult =
-            routeAccessibilityService.FindNearestPoint(
+            routeAccessibilityService.FindNearestPointIndexed(
+                direction,
                 to.Latitude,
                 to.Longitude,
-                direction.Path);
+                maximumWalkingDistanceMeters);
 
         if (fromResult.NearestPoint == null ||
             toResult.NearestPoint == null)

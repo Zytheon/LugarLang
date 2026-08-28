@@ -53,7 +53,9 @@ public class RoutingCandidateCard : Border
             new Label
             {
                 Text =
-                    $"{Candidate.RouteName}",
+                    Candidate.Legs.Count == 1
+                        ? Candidate.Legs[0].RouteName
+                        : "Journey",
 
                 FontSize = 16,
 
@@ -61,47 +63,75 @@ public class RoutingCandidateCard : Border
                     FontAttributes.Bold
             });
 
-        layout.Children.Add(
-            new Label
+        if (Candidate.Legs.Count > 0)
+        {
+            for (
+                int i = 0;
+                i < Candidate.Legs.Count;
+                i++)
             {
-                Text =
-                    $"Direction: " +
-                    $"{(Candidate.DirectionCorrect
-                        ? "RIGHT"
-                        : "WRONG")}",
+                RoutingDebugLegInfo leg =
+                    Candidate.Legs[i];
 
-                FontSize = 13
-            });
+                layout.Children.Add(
+                    new Label
+                    {
+                        Text =
+                            $"Ride {i + 1}: " +
+                            $"{leg.RouteName} " +
+                            $"({leg.DirectionName})",
 
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"First walk: " +
-                    $"{Candidate.FromWalkingDistance:F0} m",
+                        FontSize = 13
+                    });
 
-                FontSize = 13
-            });
+                layout.Children.Add(
+                    new Label
+                    {
+                        Text =
+                            $"  Walk before: " +
+                            $"{leg.FromWalkingDistance:F0} m",
 
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Ride: " +
-                    $"{Candidate.RideDistanceMeters:F0} m",
+                        FontSize = 12
+                    });
 
-                FontSize = 13
-            });
+                layout.Children.Add(
+                    new Label
+                    {
+                        Text =
+                            $"  Ride: " +
+                            $"{leg.RideDistanceMeters:F0} m",
 
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Second walk: " +
-                    $"{Candidate.ToWalkingDistance:F0} m",
+                        FontSize = 12
+                    });
 
-                FontSize = 13
-            });
+                if (
+                    i ==
+                    Candidate.Legs.Count - 1)
+                {
+                    layout.Children.Add(
+                        new Label
+                        {
+                            Text =
+                                $"  Walk after: " +
+                                $"{leg.ToWalkingDistance:F0} m",
+
+                            FontSize = 12
+                        });
+                }
+                else
+                {
+                    layout.Children.Add(
+                        new Label
+                        {
+                            Text =
+                                $"  Transfer walk: " +
+                                $"{leg.ToWalkingDistance:F0} m",
+
+                            FontSize = 12
+                        });
+                }
+            }
+        }
 
         layout.Children.Add(
             new Label
@@ -111,6 +141,36 @@ public class RoutingCandidateCard : Border
                     $"{Candidate.TotalWalkingDistance:F0} m",
 
                 FontSize = 13
+            });
+
+        layout.Children.Add(
+            new Label
+            {
+                Text =
+                    $"Total ride: " +
+                    $"{Candidate.RideDistanceMeters:F0} m",
+
+                FontSize = 13
+            });
+
+        layout.Children.Add(
+            new Label
+            {
+                Text =
+                    $"Rides: " +
+                    $"{Candidate.NumberOfRides}",
+
+                FontSize = 12
+            });
+
+        layout.Children.Add(
+            new Label
+            {
+                Text =
+                    $"Transfers: " +
+                    $"{Candidate.NumberOfTransfers}",
+
+                FontSize = 12
             });
 
         layout.Children.Add(

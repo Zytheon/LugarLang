@@ -6,18 +6,34 @@ namespace LugarLang.Mobile.Services.Routing;
 public class JourneyRoutingService
 {
     private readonly TripRoutingService tripRoutingService;
-
     private readonly RouteTransferService routeTransferService;
+    private readonly RouteAccessibilityService routeAccessibilityService;
+
+    private readonly Dictionary<Direction, RouteBounds>
+    routeBoundsCache =
+        new();
+
+    private readonly record struct RouteBounds(
+        double MinLatitude,
+        double MaxLatitude,
+        double MinLongitude,
+        double MaxLongitude);
 
     public JourneyRoutingService(
         TripRoutingService tripRoutingService,
-        RouteTransferService routeTransferService)
+        RouteTransferService routeTransferService,
+        RouteAccessibilityService routeAccessibilityService)
+
+
     {
         this.tripRoutingService =
             tripRoutingService;
 
         this.routeTransferService =
             routeTransferService;
+
+        this.routeAccessibilityService =
+            routeAccessibilityService;
     }
 
     public List<Journey> FindJourneys(
@@ -120,88 +136,116 @@ public class JourneyRoutingService
     }
 
     private void AddTwoRideJourneys(
-        List<Journey> journeys,
-        List<Route> routes,
-        GeoPoint from,
-        GeoPoint to,
-        double maximumWalkingDistanceMeters)
+    List<Journey> journeys,
+    List<Route> routes,
+    GeoPoint from,
+    GeoPoint to,
+    double maximumWalkingDistanceMeters)
     {
+        List<(Route Route, Direction Direction, RouteAccessResult AccessResult)>
+            originDirections =
+                new();
+
+        List<(Route Route, Direction Direction, RouteAccessResult AccessResult)>
+            destinationDirections =
+                new();
+
+        foreach (Route route in routes)
+        {
+            foreach (Direction direction in GetDirections(route))
+            {
+                RouteAccessResult fromResult =
+                    routeAccessibilityService.FindNearestPointIndexed(
+                        direction,
+                        from.Latitude,
+                        from.Longitude,
+                        maximumWalkingDistanceMeters);
+
+                if (
+                    fromResult.NearestPoint != null &&
+                    fromResult.DistanceMeters <=
+                    maximumWalkingDistanceMeters)
+                {
+                    originDirections.Add(
+                        (route, direction, fromResult));
+                }
+
+                RouteAccessResult toResult =
+                    routeAccessibilityService.FindNearestPointIndexed(
+                        direction,
+                        to.Latitude,
+                        to.Longitude,
+                        maximumWalkingDistanceMeters);
+
+                if (
+                    toResult.NearestPoint != null &&
+                    toResult.DistanceMeters <=
+                    maximumWalkingDistanceMeters)
+                {
+                    destinationDirections.Add(
+                        (route, direction, toResult));
+                }
+            }
+        }
+
         foreach (
-            Route firstRoute
-            in routes)
+            (Route firstRoute, Direction firstDirection, RouteAccessResult fromAccessResult)
+            in originDirections)
         {
             foreach (
-                Route secondRoute
-                in routes)
+                (Route secondRoute, Direction secondDirection, RouteAccessResult toAccessResult)
+                in destinationDirections)
             {
-                foreach (
-                    Direction firstDirection
-                    in GetDirections(firstRoute))
+                if (
+                    firstRoute == secondRoute &&
+                    firstDirection == secondDirection)
                 {
-                    foreach (
-                        Direction secondDirection
-                        in GetDirections(secondRoute))
-                    {
-                        if (
-                            firstRoute ==
-                            secondRoute &&
-                            firstDirection ==
-                            secondDirection)
-                        {
-                            continue;
-                        }
-
-                        AddTwoRideJourneyCandidates(
-                            journeys,
-                            firstRoute,
-                            firstDirection,
-                            secondRoute,
-                            secondDirection,
-                            from,
-                            to,
-                            maximumWalkingDistanceMeters);
-                    }
+                    continue;
                 }
+
+                AddTwoRideJourneyCandidates(
+                    journeys,
+                    firstRoute,
+                    firstDirection,
+                    secondRoute,
+                    secondDirection,
+                    from,
+                    to,
+                    maximumWalkingDistanceMeters,
+                    fromAccessResult,
+                    toAccessResult);
             }
         }
     }
 
     private void AddTwoRideJourneyCandidates(
-        List<Journey> journeys,
-        Route firstRoute,
-        Direction firstDirection,
-        Route secondRoute,
-        Direction secondDirection,
-        GeoPoint from,
-        GeoPoint to,
-        double maximumWalkingDistanceMeters)
+    List<Journey> journeys,
+    Route firstRoute,
+    Direction firstDirection,
+    Route secondRoute,
+    Direction secondDirection,
+    GeoPoint from,
+    GeoPoint to,
+    double maximumWalkingDistanceMeters,
+    RouteAccessResult fromAccessResult,
+    RouteAccessResult toAccessResult)
     {
-        RouteAccessResult fromResult =
-            FindNearestPoint(
-                from,
-                firstDirection);
-
-        RouteAccessResult toResult =
-            FindNearestPoint(
-                to,
-                secondDirection);
-
         if (
-            fromResult.NearestPoint == null ||
-            toResult.NearestPoint == null)
+            fromAccessResult.NearestPoint == null ||
+            toAccessResult.NearestPoint == null)
         {
             return;
         }
 
         if (
-            fromResult.DistanceMeters >
+            fromAccessResult.DistanceMeters >
             maximumWalkingDistanceMeters)
         {
             return;
         }
 
         if (
-            toResult.DistanceMeters >
+            toAccessResult.DistanceMeters >
             maximumWalkingDistanceMeters)
         {
             return;
@@ -209,19 +253,33 @@ public class JourneyRoutingService
 
         int fromIndex =
             FindNearestPathIndex(
-                fromResult.NearestPoint,
+                fromAccessResult.NearestPoint,
                 firstDirection.Path);
 
         int toIndex =
             FindNearestPathIndex(
-                toResult.NearestPoint,
+                toAccessResult.NearestPoint,
                 secondDirection.Path);
+
+        if (
+            !CouldRoutesTransfer(
+                firstDirection,
+                secondDirection,
+                maximumWalkingDistanceMeters))
+        {
+            return;
+        }
 
         List<TransferPoint> transfers =
             routeTransferService.FindTransferPoints(
                 firstDirection,
                 secondDirection,
                 maximumWalkingDistanceMeters);
+
+        if (transfers.Count == 0)
+        {
+            return;
+        }
 
         foreach (
             TransferPoint transfer
@@ -266,11 +324,11 @@ public class JourneyRoutingService
                     firstDirection,
                     from,
                     transfer.Location,
-                    fromResult.NearestPoint,
+                    fromAccessResult.NearestPoint,
                     transfer.Location,
                     fromIndex,
                     transfer.FirstRoutePathIndex,
-                    fromResult.DistanceMeters,
+                    fromAccessResult.DistanceMeters,
                     transfer.WalkingDistanceMeters,
                     firstRideDistance);
 
@@ -281,11 +339,11 @@ public class JourneyRoutingService
                     transfer.Location,
                     to,
                     transfer.Location,
-                    toResult.NearestPoint,
+                    toAccessResult.NearestPoint,
                     transfer.SecondRoutePathIndex,
                     toIndex,
                     transfer.WalkingDistanceMeters,
-                    toResult.DistanceMeters,
+                    toAccessResult.DistanceMeters,
                     secondRideDistance);
 
             Journey journey =
@@ -372,33 +430,6 @@ public class JourneyRoutingService
         };
     }
 
-    private RouteAccessResult FindNearestPoint(
-        GeoPoint point,
-        Direction direction)
-    {
-        RouteAccessibilityService accessibility =
-            GetAccessibilityService();
-
-        return accessibility.FindNearestPoint(
-            point.Latitude,
-            point.Longitude,
-            direction.Path);
-    }
-
-    private RouteAccessibilityService
-        GetAccessibilityService()
-    {
-        return
-            (RouteAccessibilityService)
-            typeof(TripRoutingService)
-                .GetField(
-                    "routeAccessibilityService",
-                    System.Reflection.BindingFlags.NonPublic |
-                    System.Reflection.BindingFlags.Instance)!
-                .GetValue(
-                    tripRoutingService)!;
-    }
-
     private IEnumerable<Direction>
         GetDirections(Route route)
     {
@@ -417,9 +448,7 @@ public class JourneyRoutingService
         Route route,
         Direction direction)
     {
-        if (
-            route.Inbound ==
-            direction)
+        if (route.Inbound == direction)
         {
             return "Inbound";
         }
@@ -448,9 +477,7 @@ public class JourneyRoutingService
                     path[i].Latitude,
                     path[i].Longitude);
 
-            if (
-                distance <
-                smallestDistance)
+            if (distance < smallestDistance)
             {
                 smallestDistance =
                     distance;
@@ -461,6 +488,26 @@ public class JourneyRoutingService
         }
 
         return nearestIndex;
+    }
+
+    private double[] BuildCumulativeDistances(
+    IList<GeoPoint> path)
+    {
+        double[] distances =
+            new double[path.Count];
+
+        for (int i = 1; i < path.Count; i++)
+        {
+            distances[i] =
+                distances[i - 1] +
+                CalculateDistanceMeters(
+                    path[i - 1].Latitude,
+                    path[i - 1].Longitude,
+                    path[i].Latitude,
+                    path[i].Longitude);
+        }
+
+        return distances;
     }
 
     private double CalculatePathDistance(
@@ -492,6 +539,169 @@ public class JourneyRoutingService
         }
 
         return totalDistance;
+    }
+
+    private RouteBounds GetRouteBounds(
+    Direction direction)
+    {
+        if (
+            routeBoundsCache.TryGetValue(
+                direction,
+                out RouteBounds cachedBounds))
+        {
+            return cachedBounds;
+        }
+
+        IList<GeoPoint> path =
+            direction.Path;
+
+        if (path.Count == 0)
+        {
+            RouteBounds emptyBounds =
+                new(
+                    0,
+                    0,
+                    0,
+                    0);
+
+            routeBoundsCache[direction] =
+                emptyBounds;
+
+            return emptyBounds;
+        }
+
+        double minLatitude =
+            path[0].Latitude;
+
+        double maxLatitude =
+            path[0].Latitude;
+
+        double minLongitude =
+            path[0].Longitude;
+
+        double maxLongitude =
+            path[0].Longitude;
+
+        for (
+            int i = 1;
+            i < path.Count;
+            i++)
+        {
+            GeoPoint point =
+                path[i];
+
+            minLatitude =
+                Math.Min(
+                    minLatitude,
+                    point.Latitude);
+
+            maxLatitude =
+                Math.Max(
+                    maxLatitude,
+                    point.Latitude);
+
+            minLongitude =
+                Math.Min(
+                    minLongitude,
+                    point.Longitude);
+
+            maxLongitude =
+                Math.Max(
+                    maxLongitude,
+                    point.Longitude);
+        }
+
+        RouteBounds bounds =
+            new(
+                minLatitude,
+                maxLatitude,
+                minLongitude,
+                maxLongitude);
+
+        routeBoundsCache[direction] =
+            bounds;
+
+        return bounds;
+    }
+
+    private bool CouldRoutesTransfer(
+    Direction firstDirection,
+    Direction secondDirection,
+    double maximumWalkingDistanceMeters)
+    {
+        if (
+            firstDirection.Path.Count == 0 ||
+            secondDirection.Path.Count == 0)
+        {
+            return false;
+        }
+
+        RouteBounds firstBounds =
+            GetRouteBounds(
+                firstDirection);
+
+        RouteBounds secondBounds =
+            GetRouteBounds(
+                secondDirection);
+
+        double latitudeGapMeters = 0;
+
+        if (
+            firstBounds.MaxLatitude <
+            secondBounds.MinLatitude)
+        {
+            latitudeGapMeters =
+                CalculateDistanceMeters(
+                    firstBounds.MaxLatitude,
+                    0,
+                    secondBounds.MinLatitude,
+                    0);
+        }
+        else if (
+            secondBounds.MaxLatitude <
+            firstBounds.MinLatitude)
+        {
+            latitudeGapMeters =
+                CalculateDistanceMeters(
+                    secondBounds.MaxLatitude,
+                    0,
+                    firstBounds.MinLatitude,
+                    0);
+        }
+
+        double longitudeGapMeters = 0;
+
+        if (
+            firstBounds.MaxLongitude <
+            secondBounds.MinLongitude)
+        {
+            longitudeGapMeters =
+                CalculateDistanceMeters(
+                    0,
+                    firstBounds.MaxLongitude,
+                    0,
+                    secondBounds.MinLongitude);
+        }
+        else if (
+            secondBounds.MaxLongitude <
+            firstBounds.MinLongitude)
+        {
+            longitudeGapMeters =
+                CalculateDistanceMeters(
+                    0,
+                    secondBounds.MaxLongitude,
+                    0,
+                    firstBounds.MinLongitude);
+        }
+
+        double minimumPossibleDistanceMeters =
+            Math.Sqrt(
+                latitudeGapMeters * latitudeGapMeters +
+                longitudeGapMeters * longitudeGapMeters);
+
+        return
+            minimumPossibleDistanceMeters <=
+            maximumWalkingDistanceMeters;
     }
 
     private double CalculateDistanceMeters(

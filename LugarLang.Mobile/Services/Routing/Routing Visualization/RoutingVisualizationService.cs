@@ -26,20 +26,25 @@ public class RoutingVisualizationService
 
         List<DirectionEvaluation> walkRanked =
             selectedCandidates
-                .OrderBy(candidate =>
-                    candidate.TotalWalkingDistance)
+                .OrderBy(
+                    candidate =>
+                        candidate.TotalWalkingDistance)
                 .ToList();
 
         List<DirectionEvaluation> rideRanked =
             selectedCandidates
-                .OrderBy(candidate =>
-                    candidate.RideDistanceMeters)
+                .OrderBy(
+                    candidate =>
+                        candidate.RideDistanceMeters)
                 .ToList();
 
         Dictionary<DirectionEvaluation, int> walkRanks =
             new();
 
-        for (int i = 0; i < walkRanked.Count; i++)
+        for (
+            int i = 0;
+            i < walkRanked.Count;
+            i++)
         {
             walkRanks[walkRanked[i]] =
                 i + 1;
@@ -48,7 +53,10 @@ public class RoutingVisualizationService
         Dictionary<DirectionEvaluation, int> rideRanks =
             new();
 
-        for (int i = 0; i < rideRanked.Count; i++)
+        for (
+            int i = 0;
+            i < rideRanked.Count;
+            i++)
         {
             rideRanks[rideRanked[i]] =
                 i + 1;
@@ -85,6 +93,65 @@ public class RoutingVisualizationService
         return snapshot;
     }
 
+    public RoutingDebugInfo ConvertJourneyToDebugInfo(
+        Journey journey,
+        double maximumWalkingDistanceMeters)
+    {
+        RoutingDebugInfo debugInfo =
+            new()
+            {
+                JourneyId =
+                    BuildJourneyId(journey),
+
+                TotalWalkingDistance =
+                    journey.TotalWalkingDistanceMeters,
+
+                RideDistanceMeters =
+                    journey.TotalRideDistanceMeters,
+
+                NumberOfRides =
+                    journey.NumberOfRides,
+
+                NumberOfTransfers =
+                    journey.NumberOfTransfers,
+
+                Viable =
+                    true,
+
+                Score =
+                    0
+            };
+
+        foreach (
+            JourneyLeg leg
+            in journey.Legs)
+        {
+            debugInfo.Legs.Add(
+                new RoutingDebugLegInfo
+                {
+                    RouteId =
+                        leg.RouteId,
+
+                    RouteName =
+                        leg.RouteName,
+
+                    DirectionName =
+                        leg.DirectionName,
+
+                    FromWalkingDistance =
+                        leg.FromWalkingDistanceMeters,
+
+                    ToWalkingDistance =
+                        leg.ToWalkingDistanceMeters,
+
+                    RideDistanceMeters =
+                        leg.RideDistanceMeters
+                });
+        }
+
+        return debugInfo;
+    }
+
     public string CreateTextSummary(
         RoutingDebugSnapshot snapshot)
     {
@@ -111,88 +178,56 @@ public class RoutingVisualizationService
             in snapshot.Candidates)
         {
             output.AppendLine(
-                $"ROUTE {candidate.RouteId} | " +
-                $"{candidate.RouteName}");
+                $"JOURNEY {candidate.JourneyId}");
 
-            output.AppendLine(
-                $"Direction: " +
-                $"{(candidate.DirectionCorrect
-                    ? "RIGHT"
-                    : "WRONG")}");
+            for (
+                int i = 0;
+                i < candidate.Legs.Count;
+                i++)
+            {
+                RoutingDebugLegInfo leg =
+                    candidate.Legs[i];
 
-            output.AppendLine(
-                $"First walk: " +
-                $"{candidate.FromWalkingDistance:F0} m");
+                output.AppendLine(
+                    $"  RIDE {i + 1}: " +
+                    $"{leg.RouteId} | " +
+                    $"{leg.RouteName}");
 
-            output.AppendLine(
-                $"Ride: " +
-                $"{candidate.RideDistanceMeters:F0} m");
+                output.AppendLine(
+                    $"    Direction: " +
+                    $"{leg.DirectionName}");
 
-            output.AppendLine(
-                $"Second walk: " +
-                $"{candidate.ToWalkingDistance:F0} m");
+                output.AppendLine(
+                    $"    From walk: " +
+                    $"{leg.FromWalkingDistance:F0} m");
+
+                output.AppendLine(
+                    $"    Ride: " +
+                    $"{leg.RideDistanceMeters:F0} m");
+
+                output.AppendLine(
+                    $"    To walk: " +
+                    $"{leg.ToWalkingDistance:F0} m");
+            }
 
             output.AppendLine(
                 $"Total walk: " +
                 $"{candidate.TotalWalkingDistance:F0} m");
 
             output.AppendLine(
-                $"Walk preference rank: " +
-                $"#{candidate.WalkPreferenceRank}");
+                $"Total ride: " +
+                $"{candidate.RideDistanceMeters:F0} m");
 
             output.AppendLine(
-                $"Ride preference rank: " +
-                $"#{candidate.RidePreferenceRank}");
+                $"Rides: " +
+                $"{candidate.NumberOfRides}");
 
             output.AppendLine(
-                $"Within preference: " +
-                $"{candidate.WithinWalkingPreference}");
-
-            output.AppendLine(
-                $"Viable: " +
-                $"{candidate.Viable}");
+                $"Transfers: " +
+                $"{candidate.NumberOfTransfers}");
 
             output.AppendLine();
-        }
 
-        output.AppendLine(
-            "========== SELECTED TRIP ==========");
-
-        if (snapshot.SelectedCandidate == null)
-        {
-            output.AppendLine(
-                "No trip selected.");
-        }
-        else
-        {
-            RoutingDebugInfo selected =
-                snapshot.SelectedCandidate;
-
-            output.AppendLine(
-                $"ROUTE {selected.RouteId} | " +
-                $"{selected.RouteName}");
-
-            output.AppendLine(
-                $"Direction: " +
-                $"{(selected.DirectionCorrect
-                    ? "RIGHT"
-                    : "WRONG")}");
-
-            output.AppendLine(
-                $"Total walk: " +
-                $"{selected.TotalWalkingDistance:F0} m");
-
-            output.AppendLine(
-                $"Ride: " +
-                $"{selected.RideDistanceMeters:F0} m");
-
-            output.AppendLine(
-                $"Walk preference rank: " +
-                $"#{selected.WalkPreferenceRank}");
-
-            output.AppendLine(
-                $"Ride preference rank: " +
-                $"#{selected.RidePreferenceRank}");
         }
 
         output.AppendLine(
@@ -211,57 +246,77 @@ public class RoutingVisualizationService
             evaluation.ToIndex >
             evaluation.FromIndex;
 
-        return new RoutingDebugInfo
-        {
-            RouteId =
-                evaluation.Route.Id,
+        RoutingDebugInfo debugInfo =
+            new()
+            {
+                JourneyId =
+                    evaluation.Route.Id,
 
-            RouteName =
-                evaluation.Route.Name,
+                TotalWalkingDistance =
+                    evaluation.TotalWalkingDistance,
 
-            DirectionName =
-                evaluation.DirectionName,
+                RideDistanceMeters =
+                    evaluation.RideDistanceMeters,
 
-            FromWalkingDistance =
-                evaluation.FromWalkingDistance,
+                NumberOfRides =
+                    1,
 
-            ToWalkingDistance =
-                evaluation.ToWalkingDistance,
+                NumberOfTransfers =
+                    0,
 
-            TotalWalkingDistance =
-                evaluation.TotalWalkingDistance,
+                Viable =
+                    evaluation.Viable,
 
-            RideDistanceMeters =
-                evaluation.RideDistanceMeters,
+                Score =
+                    0,
 
-            WithinWalkingPreference =
-                evaluation.TotalWalkingDistance <=
-                maximumWalkingDistanceMeters,
+                WalkPreferenceRank =
+                    walkRanks.TryGetValue(
+                        evaluation,
+                        out int walkRank)
+                        ? walkRank
+                        : 0,
 
-            DirectionCorrect =
-                directionCorrect,
+                RidePreferenceRank =
+                    rideRanks.TryGetValue(
+                        evaluation,
+                        out int rideRank)
+                        ? rideRank
+                        : 0
+            };
 
-            Viable =
-                evaluation.Viable,
+        debugInfo.Legs.Add(
+            new RoutingDebugLegInfo
+            {
+                RouteId =
+                    evaluation.Route.Id,
 
-            Score =
-                0,
+                RouteName =
+                    evaluation.Route.Name,
 
-            WalkPreferenceRank =
-                walkRanks.TryGetValue(
-                    evaluation,
-                    out int walkRank)
-                    ? walkRank
-                    : 0,
+                DirectionName =
+                    evaluation.DirectionName,
 
-            RidePreferenceRank =
-                rideRanks.TryGetValue(
-                    evaluation,
-                    out int rideRank)
-                    ? rideRank
-                    : 0
-        };
+                FromWalkingDistance =
+                    evaluation.FromWalkingDistance,
+
+                ToWalkingDistance =
+                    evaluation.ToWalkingDistance,
+
+                RideDistanceMeters =
+                    evaluation.RideDistanceMeters
+            });
+
+        return debugInfo;
+    }
+
+    private string BuildJourneyId(
+        Journey journey)
+    {
+        return string.Join(
+            " → ",
+            journey.Legs.Select(
+                leg =>
+                    $"{leg.RouteId}:{leg.DirectionName}"));
     }
 }
-
-

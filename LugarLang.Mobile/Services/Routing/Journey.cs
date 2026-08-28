@@ -12,10 +12,32 @@ public class Journey
     {
         get
         {
-            return Legs.Sum(
-                leg =>
-                    leg.FromWalkingDistanceMeters +
-                    leg.ToWalkingDistanceMeters);
+            if (Legs.Count == 0)
+            {
+                return 0;
+            }
+
+            double total = 0;
+
+            for (int i = 0; i < Legs.Count; i++)
+            {
+                JourneyLeg leg =
+                    Legs[i];
+
+                // Always count the initial walk.
+                total +=
+                    leg.FromWalkingDistanceMeters;
+
+                // For the final leg, count the walk
+                // from the last vehicle to the destination.
+                if (i == Legs.Count - 1)
+                {
+                    total +=
+                        leg.ToWalkingDistanceMeters;
+                }
+            }
+
+            return total;
         }
     }
 

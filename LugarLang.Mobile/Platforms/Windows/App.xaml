@@ -5,4 +5,12 @@
     xmlns:maui="using:Microsoft.Maui"
     xmlns:local="using:LugarLang.Mobile.WinUI">
 
+    <maui:MauiWinUIApplication.Resources>
+        <SolidColorBrush
+           x:Key="SystemControlPageBackgroundMediumAltMediumBrush"
+           Color="{StaticResource SystemAltMediumColor}" />
+        <Color
+           x:Key="SystemAltMediumColor">#00000000</Color>
+    </maui:MauiWinUIApplication.Resources>
+
 </maui:MauiWinUIApplication>

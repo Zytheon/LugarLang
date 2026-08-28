@@ -3,6 +3,7 @@ using LugarLang.Mobile.Application.Routing;
 using LugarLang.Mobile.Services.Mapping;
 using LugarLang.Mobile.Services.Mapping.Factories;
 using LugarLang.Mobile.Services.Routing;
+using LugarLang.Mobile.Services.RoutingSpatial;
 using LugarLang.Mobile.Services.RoutingVisualization;
 using LugarLang.Mobile.Services.Transit;
 using LugarLang.Mobile.UI.Layout;
@@ -46,6 +47,8 @@ public partial class MapPage : ContentPage
 
     private List<DirectionEvaluation> currentCandidates = new();
 
+    private List<Journey> currentJourneys = new();
+
     public MapPage()
     {
         InitializeComponent();
@@ -66,8 +69,16 @@ public partial class MapPage : ContentPage
         transitDataService =
             new TransitDataService();
 
+        transitDataService =
+            new TransitDataService();
+
+        RouteGeometryIndex routeGeometryIndex =
+            new RouteGeometryIndex(
+                transitDataService.Network.Routes);
+
         routeAccessibilityService =
-            new RouteAccessibilityService();
+            new RouteAccessibilityService(
+                routeGeometryIndex);
 
         tripRoutingService =
             new TripRoutingService(
@@ -75,12 +86,14 @@ public partial class MapPage : ContentPage
 
         RouteTransferService routeTransferService =
             new RouteTransferService(
-                routeAccessibilityService);
+                routeAccessibilityService,
+                routeGeometryIndex);
 
         journeyRoutingService =
             new JourneyRoutingService(
                 tripRoutingService,
-                routeTransferService);
+                routeTransferService,
+                routeAccessibilityService);
 
         routingCandidateService =
             new RoutingCandidateService();
@@ -351,35 +364,26 @@ public partial class MapPage : ContentPage
                 maximumWalkingDistanceMeters);
 
         System.Diagnostics.Debug.WriteLine(
-            $"ROUTING TEST 3: Evaluated {currentCandidates.Count} candidates.");
+            $"ROUTING TEST 3: Evaluated " +
+            $"{currentCandidates.Count} direct candidates.");
 
-        DirectionEvaluation? bestTrip =
-            tripRoutingService.SelectBestTrip(
+        currentJourneys =
+            journeyRoutingService.FindJourneys(
                 transitDataService.Network.Routes,
                 fromPoint,
                 toPoint,
                 maximumWalkingDistanceMeters);
 
         System.Diagnostics.Debug.WriteLine(
-            "ROUTING TEST 4: Best trip selected.");
+            $"ROUTING TEST 4: Found " +
+            $"{currentJourneys.Count} journeys.");
 
-        RoutingDebugSnapshot snapshot =
-            routingVisualizationService.CreateSnapshot(
-                currentCandidates,
-                bestTrip,
-                maximumWalkingDistanceMeters);
-
-        System.Diagnostics.Debug.WriteLine(
-            $"ROUTING TEST 5: Snapshot created with {snapshot.Candidates.Count} candidates.");
-
-        routingCandidateView.Display(
-            snapshot);
+        routingCandidateView.DisplayJourneys(
+            currentJourneys,
+            maximumWalkingDistanceMeters);
 
         System.Diagnostics.Debug.WriteLine(
-            "ROUTING TEST 7: routingCandidateView.Display completed.");
-
-        System.Diagnostics.Debug.WriteLine(
-            "ROUTING TEST 6: Reached end.");
+            "ROUTING TEST 5: Journey candidates displayed.");
     }
 
     private void RoutingCandidateView_CandidateSelected(
@@ -387,33 +391,51 @@ public partial class MapPage : ContentPage
     RoutingDebugInfo candidate)
     {
         System.Diagnostics.Debug.WriteLine(
-            $"CANDIDATE SELECTED: {candidate.RouteId} — {candidate.RouteName}");
+            $"CANDIDATE SELECTED: {candidate.JourneyId}");
 
-        DirectionEvaluation? evaluation =
-            currentCandidates.FirstOrDefault(
-                item =>
-                    item.Route.Id ==
-                    candidate.RouteId &&
-                    item.DirectionName ==
-                    candidate.DirectionName);
+        Journey? selectedJourney =
+            currentJourneys.FirstOrDefault(
+                journey =>
+                    BuildJourneyId(journey) ==
+                    candidate.JourneyId);
 
-        if (evaluation == null)
+        if (selectedJourney == null)
         {
             System.Diagnostics.Debug.WriteLine(
-                "CANDIDATE SELECTED: No matching DirectionEvaluation found.");
+                "CANDIDATE SELECTED: No matching journey found.");
 
             return;
         }
 
         System.Diagnostics.Debug.WriteLine(
-            "CANDIDATE SELECTED: Matching evaluation found.");
+            $"CANDIDATE SELECTED: Matching journey found with " +
+            $"{selectedJourney.Legs.Count} legs.");
 
-        DisplayTripRoute(
-            evaluation.Route);
-
-        DrawTrip(
-            evaluation);
+        DrawJourney(
+            selectedJourney);
     }
+
+    private void DrawJourney(
+    Journey journey)
+    {
+        System.Diagnostics.Debug.WriteLine(
+            "DRAW JOURNEY: Starting.");
+
+        foreach (
+            JourneyLeg leg
+            in journey.Legs)
+        {
+            routeDisplayService.DisplayRoute(
+                mapControl,
+                leg.Evaluation.Route,
+                fromPoint,
+                toPoint);
+        }
+
+        System.Diagnostics.Debug.WriteLine(
+            "DRAW JOURNEY: Completed.");
+    }
+
 
     private void DisplayTripRoute(
     Route route)
@@ -423,20 +445,6 @@ public partial class MapPage : ContentPage
             route,
             fromPoint,
             toPoint);
-    }
-
-    private void DrawTrip(
-        DirectionEvaluation evaluation)
-    {
-        System.Diagnostics.Debug.WriteLine(
-            "DRAW TRIP: Starting.");
-
-        tripVisualizationService.DrawTrip(
-            mapControl,
-            evaluation);
-
-        System.Diagnostics.Debug.WriteLine(
-            "DRAW TRIP: Completed.");
     }
 
     private void RoutePicker_SelectedIndexChanged(
@@ -478,6 +486,16 @@ public partial class MapPage : ContentPage
     {
         routeDisplayService.RemoveCurrentRouteLayers(
             mapControl);
+    }
+
+    private string BuildJourneyId(
+    Journey journey)
+    {
+        return string.Join(
+            "→",
+            journey.Legs.Select(
+                leg =>
+                    $"{leg.RouteId}:{leg.DirectionName}"));
     }
 
     private void BuildResponsiveLayout()
