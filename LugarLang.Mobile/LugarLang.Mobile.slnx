@@ -1,9 +1,22 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Beta" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Dev" />
+    <BuildType Name="Draft" />
+    <BuildType Name="Release" />
+  </Configurations>
   <Project Path="../../CdoGtfsConverter/CdoGtfsConverter.Backend/CdoGtfsConverter.csproj" />
   <Project Path="../MapsuiSandbox/MapsuiSandbox.csproj" Id="fa37014e-5c4a-4400-b077-632f5ad919b2">
+    <BuildType Solution="Beta|*" Project="Release" />
+    <BuildType Solution="Dev|*" Project="Release" />
+    <BuildType Solution="Draft|*" Project="Release" />
+    <Build Solution="Beta|*" Project="false" />
+    <Build Solution="Dev|*" Project="false" />
+    <Build Solution="Draft|*" Project="false" />
     <Deploy Solution="Debug|*" />
   </Project>
   <Project Path="LugarLang.Mobile.csproj">
-    <Deploy Solution="Debug|*" />
+    <Deploy />
   </Project>
 </Solution>
