@@ -52,7 +52,10 @@ public partial class DiscoverPage : ContentPage
 async () => await LaunchDeveloperEditor();
 
         DeveloperLauncherControl.MultiUIEditClicked =
-    async () => await LaunchDeveloperEditor(startInMultiSelectMode: true);
+            async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.MultiSelect);
+
+        DeveloperLauncherControl.AddUIElementClicked =
+    async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.AddElement);
 
     }
 
@@ -138,7 +141,7 @@ async () => await LaunchDeveloperEditor();
     }
 
     private async Task LaunchDeveloperEditor(
-        bool startInMultiSelectMode = false)
+        DeveloperEditorLaunchMode launchMode = DeveloperEditorLaunchMode.Normal)
     {
         const double manualOffsetAdjustment = -32;
 
@@ -153,7 +156,7 @@ async () => await LaunchDeveloperEditor();
             new DeveloperEditorModalPage(
                 this.Content!,
                 verticalOffset,
-                startInMultiSelectMode);
+                launchMode);
 
         await Navigation.PushModalAsync(
             modalPage,

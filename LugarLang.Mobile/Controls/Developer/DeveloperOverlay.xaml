@@ -7,10 +7,141 @@
     HorizontalOptions="Fill"
     VerticalOptions="Fill"
     IsVisible="False">
+    
+    
 
     <Grid>
 
-    <AbsoluteLayout
+        <Border
+    x:Name="AddElementFormPanel"
+    ZIndex="95"
+    IsVisible="False"
+    BackgroundColor="{AppThemeBinding Light=White, Dark=#202020}"
+    Stroke="Black"
+    StrokeThickness="2"
+    Padding="16"
+    WidthRequest="300"
+    HorizontalOptions="Center"
+    VerticalOptions="Center">
+
+            <VerticalStackLayout
+        Spacing="10">
+
+                <Label
+            Text="Add UI Element"
+            FontSize="18"
+            FontAttributes="Bold" />
+
+                <Grid
+            ColumnDefinitions="*,*"
+            ColumnSpacing="8">
+
+                    <Button
+                x:Name="AddTypeButtonToggle"
+                Text="Button"
+                Clicked="OnAddTypeToggleClicked" />
+
+                    <Button
+                Grid.Column="1"
+                Text="Label"
+                Clicked="OnAddTypeToggleClicked" />
+
+                </Grid>
+
+                <Entry
+            x:Name="AddElementNameEntry"
+            Placeholder="Enter a name" />
+
+                <Grid
+            ColumnDefinitions="*,*"
+            ColumnSpacing="8"
+            Margin="0,8,0,0">
+
+                    <Button
+                Text="Cancel"
+                Clicked="OnAddFormCancelClicked" />
+
+                    <Button
+                Grid.Column="1"
+                Text="Next"
+                Clicked="OnAddFormNextClicked" />
+
+                </Grid>
+
+            </VerticalStackLayout>
+
+        </Border>
+
+        <Border
+    x:Name="AddElementBrowserPanel"
+    ZIndex="95"
+    IsVisible="False"
+    BackgroundColor="{AppThemeBinding Light=White, Dark=#202020}"
+    Stroke="Black"
+    StrokeThickness="2"
+    Padding="16"
+    WidthRequest="320"
+    HorizontalOptions="Center"
+    VerticalOptions="Center">
+
+            <VerticalStackLayout
+        Spacing="8">
+
+                <Grid
+            ColumnDefinitions="Auto,*">
+
+                    <Button
+                x:Name="AddBrowserBackButton"
+                Text="←"
+                FontSize="18"
+                WidthRequest="40"
+                HeightRequest="40"
+                Padding="0"
+                BackgroundColor="Gray"
+                TextColor="White"
+                IsVisible="False"
+                Clicked="OnAddBrowserBackClicked" />
+
+                    <Label
+                x:Name="AddBrowserTitleLabel"
+                Grid.Column="1"
+                Text="Choose where to add it"
+                FontSize="16"
+                FontAttributes="Bold"
+                VerticalOptions="Center"
+                Margin="8,0,0,0" />
+
+                </Grid>
+
+                <VerticalStackLayout
+            x:Name="AddBrowserOptionsLayout"
+            Spacing="4" />
+
+                <Grid
+            ColumnDefinitions="*,*"
+            ColumnSpacing="8"
+            Margin="0,8,0,0">
+
+                    <Button
+                Text="Cancel"
+                BackgroundColor="DodgerBlue"
+                TextColor="White"
+                Clicked="OnAddBrowserCancelClicked" />
+
+                    <Button
+                Grid.Column="1"
+                Text="Confirm"
+                BackgroundColor="DodgerBlue"
+                TextColor="White"
+                Clicked="OnAddBrowserConfirmClicked" />
+
+                </Grid>
+
+            </VerticalStackLayout>
+
+        </Border>
+
+        <AbsoluteLayout
     x:Name="CandidateSurface"
     ZIndex="20"
     IsVisible="False"
@@ -355,6 +486,8 @@
                 </VerticalStackLayout>
             </ScrollView>
         </Border>
+        
+        
 
     </Grid>
 

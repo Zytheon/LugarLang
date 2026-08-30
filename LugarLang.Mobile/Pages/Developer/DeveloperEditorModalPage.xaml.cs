@@ -1,11 +1,18 @@
 namespace LugarLang.Mobile.Pages.Developer;
 
+public enum DeveloperEditorLaunchMode
+{
+    Normal,
+    MultiSelect,
+    AddElement
+}
+
 public partial class DeveloperEditorModalPage : ContentPage
 {
     public DeveloperEditorModalPage(
         View editableRoot,
         double verticalOffset,
-        bool startInMultiSelectMode = false)
+        DeveloperEditorLaunchMode launchMode = DeveloperEditorLaunchMode.Normal)
     {
         InitializeComponent();
 
@@ -21,8 +28,21 @@ public partial class DeveloperEditorModalPage : ContentPage
         EditorOverlay.ChangesDiscarded =
             async () => await CloseModal();
 
-        EditorOverlay.BeginEditMode(
-            startInMultiSelectMode);
+        switch (launchMode)
+        {
+            case DeveloperEditorLaunchMode.MultiSelect:
+                EditorOverlay.BeginEditMode(
+                    startInMultiSelectMode: true);
+                break;
+
+            case DeveloperEditorLaunchMode.AddElement:
+                EditorOverlay.BeginAddElementMode();
+                break;
+
+            default:
+                EditorOverlay.BeginEditMode();
+                break;
+        }
     }
 
     private async Task CloseModal()

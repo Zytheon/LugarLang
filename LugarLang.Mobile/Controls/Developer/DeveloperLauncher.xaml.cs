@@ -10,9 +10,13 @@ public partial class DeveloperLauncher : ContentView
         set;
     }
 
-
-
     public Action? MultiUIEditClicked
+    {
+        get;
+        set;
+    }
+
+    public Action? AddUIElementClicked
     {
         get;
         set;
@@ -81,16 +85,13 @@ $"DeveloperLauncher PropertyChanged: {e.PropertyName}");
         CloseMenu();
     }
 
-   
-
-    private async void OnAddUIElementClicked(
+    private void OnAddUIElementClicked(
         object sender,
         EventArgs e)
     {
-        await Shell.Current.DisplayAlertAsync(
-            "Developer Tool",
-            "Add UI Element will be implemented next.",
-            "OK");
+        AddUIElementClicked?.Invoke();
+
+        CloseMenu();
     }
 
     private void OnEditUIClicked(

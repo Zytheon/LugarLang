@@ -26,8 +26,12 @@ public partial class DeveloperOverlay : ContentView
     private Rect cachedOverlayAbsoluteBounds;
 
 
-    private readonly Stack<UIEditOperation>
+    private readonly Stack<IEditorOperation>
     undoStack = new();
+
+    private readonly Stack<IEditorOperation>
+    redoStack = new();
+
     private readonly DeveloperCoordinateMapper
     coordinateMapper =
         new();
@@ -36,9 +40,6 @@ public partial class DeveloperOverlay : ContentView
     DeveloperEditableElementResolver
     editableElementResolver =
         new();
-
-    private readonly Stack<UIEditOperation>
-        redoStack = new();
 
     private readonly Dictionary<
         View,
@@ -50,6 +51,8 @@ public partial class DeveloperOverlay : ContentView
 
     private readonly List<View>
         multiSelectedElements = new();
+
+    private Dictionary<View, (double X, double Y)> groupMoveStartPositions = new();
 
     public DeveloperOverlay()
     {
@@ -161,45 +164,6 @@ public partial class DeveloperOverlay : ContentView
             "Changes Committed",
             "Your developer changes are now permanent.",
             "OK");
-    }
-
-    private sealed class UIEditOperation
-    {
-        public View Element { get; }
-
-        public double OldTranslationX { get; }
-        public double OldTranslationY { get; }
-        public double NewTranslationX { get; }
-        public double NewTranslationY { get; }
-
-        public double OldWidth { get; }
-        public double OldHeight { get; }
-        public double NewWidth { get; }
-        public double NewHeight { get; }
-
-        public UIEditOperation(
-            View element,
-            double oldTranslationX,
-            double oldTranslationY,
-            double newTranslationX,
-            double newTranslationY,
-            double oldWidth,
-            double oldHeight,
-            double newWidth,
-            double newHeight)
-        {
-            Element = element;
-
-            OldTranslationX = oldTranslationX;
-            OldTranslationY = oldTranslationY;
-            NewTranslationX = newTranslationX;
-            NewTranslationY = newTranslationY;
-
-            OldWidth = oldWidth;
-            OldHeight = oldHeight;
-            NewWidth = newWidth;
-            NewHeight = newHeight;
-        }
     }
 
     public void SetEditableRoot(
@@ -392,6 +356,11 @@ public partial class DeveloperOverlay : ContentView
             multiSelectedElements.Add(element);
         }
 
+
+        System.Diagnostics.Debug.WriteLine(
+            $"MULTISELECT: ToggleMultiSelect called. Count now = {multiSelectedElements.Count}");
+
+
         ShowMultiSelectPreviews();
 
         UpdateMultiSelectToolbarLabel();
@@ -536,9 +505,12 @@ public partial class DeveloperOverlay : ContentView
     }
 
     private void OnMultiSelectGroupClicked(
-    object sender,
-    EventArgs e)
+        object sender,
+        EventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine(
+            $"MULTISELECT: OnMultiSelectGroupClicked called. Count = {multiSelectedElements.Count}");
+
         if (multiSelectedElements.Count == 0)
         {
             return;
@@ -671,7 +643,14 @@ public partial class DeveloperOverlay : ContentView
         confirm.IsEnabled =
             overlapCandidateSelection != null;
 
-        ShowOverlapCandidatePreviews();
+        if (multiSelectMode)
+        {
+            ShowMultiSelectPreviews();
+        }
+        else
+        {
+            ShowOverlapCandidatePreviews();
+        }
     }
 
     private Button CreateOverlapOptionButton(
@@ -907,11 +886,17 @@ public partial class DeveloperOverlay : ContentView
     {
         if (multiSelectMode)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"MULTISELECT: OnOverlapConfirmClicked (multi-select branch). Count before = {multiSelectedElements.Count}");
+
             CloseOverlapChooser();
 
             ShowMultiSelectPreviews();
 
             UpdateMultiSelectToolbarLabel();
+
+            System.Diagnostics.Debug.WriteLine(
+                $"MULTISELECT: after CloseOverlapChooser. Count now = {multiSelectedElements.Count}");
 
             return;
         }
@@ -932,6 +917,8 @@ public partial class DeveloperOverlay : ContentView
 
     private void ShowGroupPanel()
     {
+        System.Diagnostics.Debug.WriteLine(
+            $"MULTISELECT: ShowGroupPanel called. Count = {multiSelectedElements.Count}");
         Border? groupPanel =
             this.FindByName<Border>(
                 "GroupPanel");
@@ -991,6 +978,9 @@ public partial class DeveloperOverlay : ContentView
 object sender,
 EventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine(
+       $"MULTISELECT: OnGroupConfirmClicked called. Count = {multiSelectedElements.Count}");
+
         Entry? nameEntry =
             this.FindByName<Entry>(
                 "GroupNameEntry");
@@ -1058,6 +1048,11 @@ EventArgs e)
 
     private void CloseOverlapChooser()
     {
+
+        System.Diagnostics.Debug.WriteLine(
+       $"MULTISELECT: CloseOverlapChooser called. Count = {multiSelectedElements.Count}");
+
+
         Border? chooser =
             this.FindByName<Border>(
                 "OverlapChooser");
@@ -1479,6 +1474,40 @@ EventArgs e)
             "RESIZE: Entry focused/clicked into");
     }
 
+    private void RecordResizeOperation(
+    double newWidth,
+    double newHeight)
+    {
+        if (selectedElement == null)
+        {
+            return;
+        }
+
+        double oldWidth =
+            resizeOperationStartWidth;
+
+        double oldHeight =
+            resizeOperationStartHeight;
+
+        if (Math.Abs(oldWidth - newWidth) < 0.01 &&
+            Math.Abs(oldHeight - newHeight) < 0.01)
+        {
+            return;
+        }
+
+        undoStack.Push(
+            new ResizeOperation(
+                selectedElement,
+                oldWidth,
+                oldHeight,
+                newWidth,
+                newHeight));
+
+        redoStack.Clear();
+
+        UpdateHistoryButtons();
+    }
+
     private string GetElementText(
         VisualElement element)
     {
@@ -1669,6 +1698,43 @@ EventArgs e)
                 cachedOverlayAbsoluteBounds =
                 coordinateMapper.GetAbsoluteBounds(this);
 
+                groupMoveStartPositions.Clear();
+
+                groupMoveStartPositions[selectedElement] =
+                    (selectedElement.TranslationX, selectedElement.TranslationY);
+
+                string? groupId =
+                    DeveloperGroup.GetGroupId(selectedElement);
+
+                if (!string.IsNullOrWhiteSpace(groupId) && editableRoot != null)
+                {
+                    List<View> allSelectableElements = new();
+
+                    CollectSelectableViews(editableRoot, allSelectableElements);
+
+                    foreach (View candidate in allSelectableElements)
+                    {
+                        if (ReferenceEquals(candidate, selectedElement))
+                        {
+                            continue;
+                        }
+
+                        if (DeveloperGroup.GetGroupId(candidate) != groupId)
+                        {
+                            continue;
+                        }
+
+                        if (IsAncestorOf(candidate, selectedElement) ||
+                            IsAncestorOf(selectedElement, candidate))
+                        {
+                            continue;
+                        }
+
+                        groupMoveStartPositions[candidate] =
+                            (candidate.TranslationX, candidate.TranslationY);
+                    }
+                }
+
                 break;
 
             case GestureStatus.Running:
@@ -1733,50 +1799,8 @@ EventArgs e)
 
                 break;
         }
-    }
 
-    private void ApplyGroupDelta(
-    View movedElement,
-    double deltaX,
-    double deltaY)
-    {
-        string? groupId =
-            DeveloperGroup.GetGroupId(
-                movedElement);
 
-        if (string.IsNullOrWhiteSpace(groupId))
-        {
-            return;
-        }
-
-        List<View> allSelectableElements =
-            new();
-
-        if (editableRoot != null)
-        {
-            CollectSelectableViews(
-                editableRoot,
-                allSelectableElements);
-        }
-
-        foreach (
-            View candidate
-            in allSelectableElements)
-        {
-            if (ReferenceEquals(candidate, movedElement))
-            {
-                continue;
-            }
-
-            if (DeveloperGroup.GetGroupId(candidate) == groupId)
-            {
-                candidate.TranslationX +=
-                    deltaX;
-
-                candidate.TranslationY +=
-                    deltaY;
-            }
-        }
     }
 
     private void RecordMoveOperation()
@@ -1786,118 +1810,178 @@ EventArgs e)
             return;
         }
 
-        double oldX =
-            moveOperationStartX;
+        List<ElementTransformChange> changes =
+            new();
 
-        double oldY =
-            moveOperationStartY;
+        foreach (var entry in groupMoveStartPositions)
+        {
+            View element = entry.Key;
+            (double oldX, double oldY) = entry.Value;
 
-        double newX =
-            selectedElement.TranslationX;
+            double newX = element.TranslationX;
+            double newY = element.TranslationY;
 
-        double newY =
-            selectedElement.TranslationY;
+            if (Math.Abs(oldX - newX) < 0.01 &&
+                Math.Abs(oldY - newY) < 0.01)
+            {
+                continue;
+            }
 
-        if (Math.Abs(oldX - newX) < 0.01 &&
-            Math.Abs(oldY - newY) < 0.01)
+            changes.Add(
+                new ElementTransformChange(
+                    element,
+                    oldX,
+                    oldY,
+                    newX,
+                    newY));
+        }
+
+        if (changes.Count == 0)
         {
             return;
         }
 
         undoStack.Push(
-            new UIEditOperation(
-                selectedElement,
-                oldX,
-                oldY,
-                newX,
-                newY,
-                selectedElement.Width,
-                selectedElement.Height,
-                selectedElement.Width,
-                selectedElement.Height));
+            new UIEditOperation(changes));
 
         redoStack.Clear();
 
-        System.Diagnostics.Debug.WriteLine(
-    $"DEVELOPER MOVE RECORDED: " +
-    $"{selectedElement.GetType().Name} " +
-    $"X={newX} Y={newY}");
-
-        LayoutChanged?.Invoke(
-    selectedElement,
-    newX,
-    newY);
+        foreach (ElementTransformChange change in changes)
+        {
+            LayoutChanged?.Invoke(
+                change.Element,
+                change.Element.TranslationX,
+                change.Element.TranslationY);
+        }
 
         UpdateHistoryButtons();
     }
 
-    private void RecordResizeOperation(
-        double newWidth,
-        double newHeight)
+    private interface IEditorOperation
     {
-        if (selectedElement == null)
-        {
-            return;
-        }
+        View PrimaryElement { get; }
 
-        double oldWidth =
-            resizeOperationStartWidth;
+        void Undo();
 
-        double oldHeight =
-            resizeOperationStartHeight;
-
-        if (Math.Abs(oldWidth - newWidth) < 0.01 &&
-            Math.Abs(oldHeight - newHeight) < 0.01)
-        {
-            return;
-        }
-
-        undoStack.Push(
-            new UIEditOperation(
-                selectedElement,
-                selectedElement.TranslationX,
-                selectedElement.TranslationY,
-                selectedElement.TranslationX,
-                selectedElement.TranslationY,
-                oldWidth,
-                oldHeight,
-                newWidth,
-                newHeight));
-
-        redoStack.Clear();
-
-        UpdateHistoryButtons();
+        void Redo();
     }
 
+    private sealed class ElementTransformChange
+    {
+        public View Element { get; }
+        public double OldTranslationX { get; }
+        public double OldTranslationY { get; }
+        public double NewTranslationX { get; }
+        public double NewTranslationY { get; }
+
+        public ElementTransformChange(
+            View element,
+            double oldTranslationX,
+            double oldTranslationY,
+            double newTranslationX,
+            double newTranslationY)
+        {
+            Element = element;
+            OldTranslationX = oldTranslationX;
+            OldTranslationY = oldTranslationY;
+            NewTranslationX = newTranslationX;
+            NewTranslationY = newTranslationY;
+        }
+    }
+
+    private sealed class UIEditOperation : IEditorOperation
+    {
+        public List<ElementTransformChange> Changes { get; }
+
+        public View PrimaryElement =>
+            Changes[0].Element;
+
+        public UIEditOperation(
+            List<ElementTransformChange> changes)
+        {
+            Changes = changes;
+        }
+
+        public void Undo()
+        {
+            foreach (ElementTransformChange change in Changes)
+            {
+                change.Element.TranslationX =
+                    change.OldTranslationX;
+
+                change.Element.TranslationY =
+                    change.OldTranslationY;
+            }
+        }
+
+        public void Redo()
+        {
+            foreach (ElementTransformChange change in Changes)
+            {
+                change.Element.TranslationX =
+                    change.NewTranslationX;
+
+                change.Element.TranslationY =
+                    change.NewTranslationY;
+            }
+        }
+    }
+
+    private sealed class ResizeOperation : IEditorOperation
+    {
+        public View Element { get; }
+        public double OldWidth { get; }
+        public double OldHeight { get; }
+        public double NewWidth { get; }
+        public double NewHeight { get; }
+
+        public View PrimaryElement =>
+            Element;
+
+        public ResizeOperation(
+            View element,
+            double oldWidth,
+            double oldHeight,
+            double newWidth,
+            double newHeight)
+        {
+            Element = element;
+            OldWidth = oldWidth;
+            OldHeight = oldHeight;
+            NewWidth = newWidth;
+            NewHeight = newHeight;
+        }
+
+        public void Undo()
+        {
+            Element.WidthRequest = OldWidth;
+            Element.HeightRequest = OldHeight;
+        }
+
+        public void Redo()
+        {
+            Element.WidthRequest = NewWidth;
+            Element.HeightRequest = NewHeight;
+        }
+    }
     private void OnUndoClicked(
-    object sender,
-    EventArgs e)
+object sender,
+EventArgs e)
     {
         if (undoStack.Count == 0)
         {
             return;
         }
 
-        UIEditOperation operation =
+        IEditorOperation operation =
             undoStack.Pop();
 
-        operation.Element.TranslationX =
-            operation.OldTranslationX;
+        operation.Undo();
 
-        operation.Element.TranslationY =
-            operation.OldTranslationY;
-
-        operation.Element.WidthRequest =
-            operation.OldWidth;
-
-        operation.Element.HeightRequest =
-            operation.OldHeight;
-
-        redoStack.Push(
-            operation);
+        redoStack.Push(operation);
 
         selectedElement =
-            operation.Element;
+            operation.PrimaryElement;
 
         RefreshSelectionVisual();
 
@@ -1905,11 +1989,6 @@ EventArgs e)
             selectedElement);
 
         UpdateHistoryButtons();
-
-        LayoutChanged?.Invoke(
-    selectedElement,
-    selectedElement.TranslationX,
-    selectedElement.TranslationY);
     }
 
     private void OnRedoClicked(
@@ -1921,26 +2000,15 @@ EventArgs e)
             return;
         }
 
-        UIEditOperation operation =
+        IEditorOperation operation =
             redoStack.Pop();
 
-        operation.Element.TranslationX =
-            operation.NewTranslationX;
+        operation.Redo();
 
-        operation.Element.TranslationY =
-            operation.NewTranslationY;
-
-        operation.Element.WidthRequest =
-            operation.NewWidth;
-
-        operation.Element.HeightRequest =
-            operation.NewHeight;
-
-        undoStack.Push(
-            operation);
+        undoStack.Push(operation);
 
         selectedElement =
-            operation.Element;
+            operation.PrimaryElement;
 
         RefreshSelectionVisual();
 
@@ -1948,11 +2016,6 @@ EventArgs e)
             selectedElement);
 
         UpdateHistoryButtons();
-
-        LayoutChanged?.Invoke(
-    selectedElement,
-    selectedElement.TranslationX,
-    selectedElement.TranslationY);
     }
 
     private void UpdateHistoryButtons()
@@ -2186,6 +2249,602 @@ EventArgs e)
                 break;
         }
     }
+
+    private bool IsAncestorOf(
+    View potentialAncestor,
+    View element)
+    {
+        IVisualTreeElement? current =
+            element;
+
+        while (current != null)
+        {
+            IVisualTreeElement? parent =
+                current.GetVisualParent();
+
+            if (parent == null)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(parent, potentialAncestor))
+            {
+                return true;
+            }
+
+            current = parent;
+        }
+
+        return false;
+    }
+
+    private void ApplyGroupDelta(
+        View movedElement,
+        double deltaX,
+        double deltaY)
+    {
+        string? groupId =
+            DeveloperGroup.GetGroupId(
+                movedElement);
+
+        if (string.IsNullOrWhiteSpace(groupId))
+        {
+            return;
+        }
+
+        List<View> allSelectableElements =
+            new();
+
+        if (editableRoot != null)
+        {
+            CollectSelectableViews(
+                editableRoot,
+                allSelectableElements);
+        }
+
+        foreach (
+            View candidate
+            in allSelectableElements)
+        {
+            if (ReferenceEquals(candidate, movedElement))
+            {
+                continue;
+            }
+
+            if (DeveloperGroup.GetGroupId(candidate) != groupId)
+            {
+                continue;
+            }
+
+            if (IsAncestorOf(candidate, movedElement) ||
+                IsAncestorOf(movedElement, candidate))
+            {
+                continue;
+            }
+
+            candidate.TranslationX +=
+                deltaX;
+
+            candidate.TranslationY +=
+                deltaY;
+        }
+    }
+
+    public void BeginAddElementMode()
+    {
+        StartEditMode();
+
+        AbsoluteLayout? editorSurface =
+            this.FindByName<AbsoluteLayout>(
+                "EditorSurface");
+
+        if (editorSurface != null)
+        {
+            editorSurface.IsVisible =
+                false;
+
+            editorSurface.InputTransparent =
+                true;
+        }
+
+        ShowAddElementForm();
+    }
+
+    private void ShowAddElementForm()
+    {
+        Border? formPanel =
+            this.FindByName<Border>(
+                "AddElementFormPanel");
+
+        Entry? nameEntry =
+            this.FindByName<Entry>(
+                "AddElementNameEntry");
+
+        if (formPanel == null ||
+            nameEntry == null)
+        {
+            return;
+        }
+
+        pendingElementType =
+            PendingElementType.Button;
+
+        nameEntry.Text =
+            string.Empty;
+
+        UpdateAddTypeToggleButtons();
+
+        formPanel.IsVisible =
+            true;
+    }
+
+    private void OnAddTypeToggleClicked(
+        object sender,
+        EventArgs e)
+    {
+        if (sender is not Button button)
+        {
+            return;
+        }
+
+        pendingElementType =
+            button.Text == "Label"
+                ? PendingElementType.Label
+                : PendingElementType.Button;
+
+        UpdateAddTypeToggleButtons();
+    }
+
+    private void UpdateAddTypeToggleButtons()
+    {
+        Button? buttonOption =
+            this.FindByName<Button>(
+                "AddTypeButtonToggle");
+
+        if (buttonOption == null)
+        {
+            return;
+        }
+
+        buttonOption.BorderWidth =
+            pendingElementType == PendingElementType.Button
+                ? 2
+                : 0;
+
+        buttonOption.BorderColor =
+            pendingElementType == PendingElementType.Button
+                ? Colors.Red
+                : Colors.Transparent;
+    }
+
+    private void OnAddFormCancelClicked(
+        object sender,
+        EventArgs e)
+    {
+        CloseAddElementFormPanel();
+
+        EndAddElementSession(
+            discarded: true);
+    }
+
+    private void OnAddFormNextClicked(
+        object sender,
+        EventArgs e)
+    {
+        Entry? nameEntry =
+            this.FindByName<Entry>(
+                "AddElementNameEntry");
+
+        pendingElementName =
+            nameEntry?.Text?.Trim() ??
+            string.Empty;
+
+        if (string.IsNullOrWhiteSpace(pendingElementName))
+        {
+            pendingElementName =
+                pendingElementType == PendingElementType.Button
+                    ? "New Button"
+                    : "New Label";
+        }
+
+        CloseAddElementFormPanel();
+
+        addElementPathStack.Clear();
+
+        if (editableRoot != null)
+        {
+            addElementPathStack.Add(
+                editableRoot);
+        }
+
+        ShowAddElementBrowser();
+    }
+
+    private void CloseAddElementFormPanel()
+    {
+        Border? formPanel =
+            this.FindByName<Border>(
+                "AddElementFormPanel");
+
+        if (formPanel != null)
+        {
+            formPanel.IsVisible =
+                false;
+        }
+    }
+
+    private bool IsContainerElement(
+    Element element)
+    {
+        return
+            element is Layout ||
+            element is ContentView ||
+            element is Border ||
+            element is ScrollView;
+    }
+
+    private void ShowAddElementBrowser()
+    {
+        Border? browserPanel =
+            this.FindByName<Border>(
+                "AddElementBrowserPanel");
+
+        VerticalStackLayout? optionsLayout =
+            this.FindByName<VerticalStackLayout>(
+                "AddBrowserOptionsLayout");
+
+        Button? backButton =
+            this.FindByName<Button>(
+                "AddBrowserBackButton");
+
+        Label? titleLabel =
+            this.FindByName<Label>(
+                "AddBrowserTitleLabel");
+
+        if (browserPanel == null ||
+            optionsLayout == null ||
+            backButton == null ||
+            addElementPathStack.Count == 0)
+        {
+            return;
+        }
+
+        Element currentContainer =
+            addElementPathStack[^1];
+
+        if (titleLabel != null)
+        {
+            string containerDescription =
+                currentContainer is View currentView
+                    ? GetElementDescription(currentView)
+                    : currentContainer.GetType().Name;
+
+            titleLabel.Text =
+                $"Add in {containerDescription}";
+        }
+
+        optionsLayout.Children.Clear();
+
+        if (currentContainer is IVisualTreeElement visualParent)
+        {
+            foreach (
+                IVisualTreeElement child
+                in visualParent.GetVisualChildren())
+            {
+                if (child is not Element childElement)
+                {
+                    continue;
+                }
+
+                if (!IsContainerElement(childElement))
+                {
+                    continue;
+                }
+
+                Button optionButton =
+                    new Button
+                    {
+                        HorizontalOptions =
+                            LayoutOptions.Fill,
+
+                        Text =
+                            childElement is View childView
+                                ? GetElementDescription(childView)
+                                : childElement.GetType().Name
+                    };
+
+                optionButton.Clicked +=
+                    (sender, args) =>
+                    {
+                        addElementPathStack.Add(
+                            childElement);
+
+                        ShowAddElementBrowser();
+                    };
+
+                optionsLayout.Children.Add(
+                    optionButton);
+            }
+        }
+
+        backButton.IsVisible =
+            addElementPathStack.Count > 1;
+
+        browserPanel.IsVisible =
+            true;
+
+        ShowAddElementCurrentContainerHighlight(
+            currentContainer);
+    }
+
+    private void ShowAddElementCurrentContainerHighlight(
+    Element currentContainer)
+    {
+        AbsoluteLayout? surface =
+            this.FindByName<AbsoluteLayout>(
+                "CandidateSurface");
+
+        if (surface == null)
+        {
+            return;
+        }
+
+        surface.Children.Clear();
+
+        if (currentContainer is not View containerView)
+        {
+            surface.IsVisible =
+                false;
+
+            return;
+        }
+
+        Rect mapped =
+            coordinateMapper.MapElementToOverlaySpace(
+                containerView,
+                this);
+
+        mapped = new Rect(
+            mapped.X,
+            mapped.Y + verticalOffset,
+            mapped.Width,
+            mapped.Height);
+
+        Border highlight =
+            new Border
+            {
+                BackgroundColor =
+                    Colors.Transparent,
+
+                Stroke =
+                    Colors.Red,
+
+                StrokeThickness =
+                    3,
+
+                InputTransparent =
+                    true
+            };
+
+        AbsoluteLayout.SetLayoutBounds(
+            highlight,
+            new Rect(
+                mapped.X +
+                    containerView.TranslationX,
+
+                mapped.Y +
+                    containerView.TranslationY,
+
+                mapped.Width,
+                mapped.Height));
+
+        surface.Children.Add(
+            highlight);
+
+        surface.IsVisible =
+            true;
+    }
+
+    private void OnAddBrowserBackClicked(
+        object sender,
+        EventArgs e)
+    {
+        if (addElementPathStack.Count > 1)
+        {
+            addElementPathStack.RemoveAt(
+                addElementPathStack.Count - 1);
+        }
+
+        ShowAddElementBrowser();
+    }
+
+    private void OnAddBrowserCancelClicked(
+        object sender,
+        EventArgs e)
+    {
+        CloseAddElementBrowserPanel();
+
+        EndAddElementSession(
+            discarded: true);
+    }
+
+    private void CloseAddElementBrowserPanel()
+    {
+        Border? browserPanel =
+            this.FindByName<Border>(
+                "AddElementBrowserPanel");
+
+        if (browserPanel != null)
+        {
+            browserPanel.IsVisible =
+                false;
+        }
+    }
+
+    private void OnAddBrowserConfirmClicked(
+        object sender,
+        EventArgs e)
+    {
+        if (addElementPathStack.Count == 0)
+        {
+            return;
+        }
+
+        Element targetParent =
+            addElementPathStack[^1];
+
+        View newElement =
+            pendingElementType == PendingElementType.Button
+                ? new Button
+                {
+                    Text = pendingElementName,
+                    AutomationId = pendingElementName,
+                    WidthRequest = 160,
+                    HeightRequest = 50
+                }
+                : new Label
+                {
+                    Text = pendingElementName,
+                    AutomationId = pendingElementName,
+                    WidthRequest = 160,
+                    HeightRequest = 40
+                };
+
+        newElement.HorizontalOptions =
+            LayoutOptions.Center;
+
+        newElement.VerticalOptions =
+            LayoutOptions.End;
+
+        if (!TryAddChildToContainer(
+                targetParent,
+                newElement))
+        {
+            return;
+        }
+
+        CloseAddElementBrowserPanel();
+
+        addElementPathStack.Clear();
+
+        AbsoluteLayout? editorSurface =
+            this.FindByName<AbsoluteLayout>(
+                "EditorSurface");
+
+        if (editorSurface != null)
+        {
+            editorSurface.IsVisible =
+                true;
+
+            editorSurface.InputTransparent =
+                false;
+        }
+
+        SelectElement(
+            newElement);
+    }
+
+    private bool TryAddChildToContainer(
+    Element container,
+    View newElement)
+    {
+        switch (container)
+        {
+            case Layout layout:
+                layout.Children.Add(
+                    newElement);
+                return true;
+
+            case Border border:
+                if (border.Content != null)
+                {
+                    return false;
+                }
+                border.Content =
+                    newElement;
+                return true;
+
+            case ContentView contentView:
+                if (contentView.Content != null)
+                {
+                    return false;
+                }
+                contentView.Content =
+                    newElement;
+                return true;
+
+            case ScrollView scrollView:
+                if (scrollView.Content != null)
+                {
+                    return false;
+                }
+                scrollView.Content =
+                    newElement;
+                return true;
+
+            default:
+                return false;
+        }
+    }
+    private void EndAddElementSession(
+    bool discarded)
+    {
+        addElementPathStack.Clear();
+
+        AbsoluteLayout? candidateSurface =
+            this.FindByName<AbsoluteLayout>(
+                "CandidateSurface");
+
+        if (candidateSurface != null)
+        {
+            candidateSurface.Children.Clear();
+
+            candidateSurface.IsVisible =
+                false;
+        }
+
+        AbsoluteLayout? editorSurface =
+            this.FindByName<AbsoluteLayout>(
+                "EditorSurface");
+
+        if (editorSurface != null)
+        {
+            editorSurface.IsVisible =
+                false;
+
+            editorSurface.InputTransparent =
+                true;
+        }
+
+        IsVisible =
+            false;
+
+        if (discarded)
+        {
+            ChangesDiscarded?.Invoke();
+        }
+        else
+        {
+            EditingCompleted?.Invoke();
+        }
+    }
+
+
+
+    private enum PendingElementType
+    {
+        Button,
+        Label
+    }
+
+    private PendingElementType pendingElementType =
+        PendingElementType.Button;
+
+    private string pendingElementName =
+        string.Empty;
+
+    private readonly List<Element>
+        addElementPathStack = new();
 
 
 }
