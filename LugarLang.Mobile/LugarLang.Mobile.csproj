@@ -65,7 +65,7 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
-
+	<!-- Random Comment -->
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
 		<PackageReference Include="Mapsui" Version="5.1.0" />
