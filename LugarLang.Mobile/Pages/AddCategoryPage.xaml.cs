@@ -90,5 +90,6 @@ public partial class AddCategoryPage : ContentPage
         EventArgs e)
     {
         await Navigation.PopAsync();
+
     }
 }

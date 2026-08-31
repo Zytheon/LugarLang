@@ -10,9 +10,11 @@ public enum DeveloperEditorLaunchMode
 public partial class DeveloperEditorModalPage : ContentPage
 {
     public DeveloperEditorModalPage(
-        View editableRoot,
-        double verticalOffset,
-        DeveloperEditorLaunchMode launchMode = DeveloperEditorLaunchMode.Normal)
+    View editableRoot,
+    double verticalOffset,
+    DeveloperEditorLaunchMode launchMode,
+    Action<VisualElement, double, double>? onLayoutChanged = null,
+    Action<VisualElement, double, double>? onSizeChanged = null)
     {
         InitializeComponent();
 
@@ -21,6 +23,12 @@ public partial class DeveloperEditorModalPage : ContentPage
 
         EditorOverlay.SetVerticalOffset(
             verticalOffset);
+
+        EditorOverlay.DeveloperLayoutChanged =
+            onLayoutChanged;
+
+        EditorOverlay.DeveloperSizeChanged =
+            onSizeChanged;
 
         EditorOverlay.EditingCompleted =
             async () => await CloseModal();
@@ -47,6 +55,13 @@ public partial class DeveloperEditorModalPage : ContentPage
 
     private async Task CloseModal()
     {
+
+        System.Diagnostics.Debug.WriteLine(
+    "CLOSE MODAL CALLED — stack trace follows:");
+
+        System.Diagnostics.Debug.WriteLine(
+            Environment.StackTrace);
+
         await Navigation.PopModalAsync(
             animated: false);
     }

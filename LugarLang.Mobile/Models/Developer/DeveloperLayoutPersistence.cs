@@ -63,28 +63,28 @@ public class DeveloperLayoutPersistenceService
 
             element.TranslationY =
                 entry.TranslationY;
+
+            if (entry.Width.HasValue)
+            {
+                element.WidthRequest =
+                    entry.Width.Value;
+            }
+
+            if (entry.Height.HasValue)
+            {
+                element.HeightRequest =
+                    entry.Height.Value;
+            }
         }
     }
 
-    public void SavePage(
-        string pageKey,
-        Element root)
-    {
-        entries.RemoveAll(
-            x => x.PageKey == pageKey);
-
-        CollectEntries(
-            pageKey,
-            root);
-
-        Save();
-    }
-
     public void SetEntry(
-    string pageKey,
-    string elementPath,
-    double translationX,
-    double translationY)
+        string pageKey,
+        string elementPath,
+        double translationX,
+        double translationY,
+        double? width = null,
+        double? height = null)
     {
         DeveloperLayoutEntry? existing =
             entries.FirstOrDefault(
@@ -97,17 +97,12 @@ public class DeveloperLayoutPersistenceService
             entries.Add(
                 new DeveloperLayoutEntry
                 {
-                    PageKey =
-                        pageKey,
-
-                    ElementPath =
-                        elementPath,
-
-                    TranslationX =
-                        translationX,
-
-                    TranslationY =
-                        translationY
+                    PageKey = pageKey,
+                    ElementPath = elementPath,
+                    TranslationX = translationX,
+                    TranslationY = translationY,
+                    Width = width,
+                    Height = height
                 });
 
             return;
@@ -118,61 +113,23 @@ public class DeveloperLayoutPersistenceService
 
         existing.TranslationY =
             translationY;
+
+        if (width.HasValue)
+        {
+            existing.Width =
+                width;
+        }
+
+        if (height.HasValue)
+        {
+            existing.Height =
+                height;
+        }
     }
 
     public void WriteToDisk()
     {
         Save();
-    }
-
-    private void CollectEntries(
-        string pageKey,
-        Element element)
-    {
-        if (element is VisualElement visualElement)
-        {
-            double x =
-                visualElement.TranslationX;
-
-            double y =
-                visualElement.TranslationY;
-
-            if (Math.Abs(x) > 0.01 ||
-                Math.Abs(y) > 0.01)
-            {
-                string path =
-                    elementPathService.GetPath(
-                        element,
-                        visualElement);
-
-                if (!string.IsNullOrWhiteSpace(path))
-                {
-                    entries.Add(
-                        new DeveloperLayoutEntry
-                        {
-                            PageKey = pageKey,
-                            ElementPath = path,
-                            TranslationX = x,
-                            TranslationY = y
-                        });
-                }
-            }
-        }
-
-        if (element is IVisualTreeElement visualTreeElement)
-        {
-            foreach (
-                IVisualTreeElement child
-                in visualTreeElement.GetVisualChildren())
-            {
-                if (child is Element childElement)
-                {
-                    CollectEntries(
-                        pageKey,
-                        childElement);
-                }
-            }
-        }
     }
 
     private void Load()

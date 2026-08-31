@@ -1,0 +1,44 @@
+[
+  {
+    "Id": "food",
+    "Name": "Foods",
+    "Icon": "\uD83C\uDF7D",
+    "DisplayOrder": 5,
+    "IsEnabled": true
+  },
+  {
+    "Id": "991d86c2-81ec-48f2-a3d7-4c2e7aebdb86",
+    "Name": "Destination",
+    "Icon": "",
+    "DisplayOrder": 6,
+    "IsEnabled": true
+  },
+  {
+    "Id": "d2a334ae-7a0f-465b-b38c-bcb06c91a9ce",
+    "Name": "Museums",
+    "Icon": "",
+    "DisplayOrder": 7,
+    "IsEnabled": true
+  },
+  {
+    "Id": "2f713c7c-658d-46ca-8371-0fdb608f4199",
+    "Name": "Beach",
+    "Icon": "",
+    "DisplayOrder": 1,
+    "IsEnabled": true
+  },
+  {
+    "Id": "0f17a313-af1a-41f2-a536-1581a15104f6",
+    "Name": "Homes",
+    "Icon": "",
+    "DisplayOrder": 1,
+    "IsEnabled": true
+  },
+  {
+    "Id": "fba77413-72fd-4549-a5d9-fc048bdd82b7",
+    "Name": "Chada",
+    "Icon": "",
+    "DisplayOrder": 1,
+    "IsEnabled": true
+  }
+]

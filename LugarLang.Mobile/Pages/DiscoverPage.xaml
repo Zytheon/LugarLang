@@ -56,10 +56,6 @@
                     IsVisible="True"
                     Clicked="OnRefreshClicked" />
 
-                <Button
-                    Text="🔧 Developer Editor Test"
-                    Clicked="OnDeveloperEditorTestClicked" />
-
                 <VerticalStackLayout
                     x:Name="DiscoveryCategoriesLayout"
                     Spacing="24" />
@@ -68,9 +64,7 @@
 
         </ScrollView>
 
-        <developer:DeveloperLauncher
-            x:Name="DeveloperLauncherControl"
-            Margin="0,0,16,16" />
+
 
     </Grid>
 

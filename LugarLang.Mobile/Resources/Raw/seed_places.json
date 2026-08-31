@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "Cucina Higala",
+    "Category": "Food",
+    "CategoryId": "food",
+    "Region": "Northern Mindanao",
+    "Latitude": 8.477,
+    "Longitude": 124.646,
+    "IsFeatured": true,
+    "FeaturedOrder": 1
+  },
+  {
+    "Name": "Redtail Shrimps & More",
+    "Category": "Food",
+    "CategoryId": "food",
+    "Region": "Northern Mindanao",
+    "Latitude": 8.482,
+    "Longitude": 124.647,
+    "IsFeatured": true,
+    "FeaturedOrder": 2
+  },
+  {
+    "Name": "Bigby's Cafe and Restaurant",
+    "Category": "Food",
+    "CategoryId": "food",
+    "Region": "Northern Mindanao",
+    "Latitude": 8.485,
+    "Longitude": 124.654,
+    "IsFeatured": true,
+    "FeaturedOrder": 3
+  },
+  {
+    "Name": "Fat Chef",
+    "Category": "Food",
+    "CategoryId": "food",
+    "Region": "Northern Mindanao",
+    "Latitude": 8.482,
+    "Longitude": 124.649,
+    "IsFeatured": true,
+    "FeaturedOrder": 4
+  }
+]

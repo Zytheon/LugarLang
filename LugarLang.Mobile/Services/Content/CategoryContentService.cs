@@ -10,12 +10,28 @@ public class CategoryContentService
     private List<DiscoveryCategory> categories =
         new();
 
+    public string ExportToJson()
+    {
+        return JsonSerializer.Serialize(
+            categories,
+            new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+    }
+
     public CategoryContentService()
     {
+
+
         filePath =
             Path.Combine(
                 FileSystem.AppDataDirectory,
                 "discovery_categories.json");
+
+        System.Diagnostics.Debug.WriteLine(
+    $"CATEGORY CONTENT SERVICE FILE PATH: {filePath}");
+
 
         Load();
     }
@@ -113,6 +129,34 @@ public class CategoryContentService
 
     private void LoadDefaultCategories()
     {
+        try
+        {
+            using Stream stream =
+                FileSystem.OpenAppPackageFileAsync(
+                    "seed_categories.json").Result;
+
+            using StreamReader reader =
+                new StreamReader(stream);
+
+            string json =
+                reader.ReadToEnd();
+
+            List<DiscoveryCategory>? seeded =
+                JsonSerializer.Deserialize<List<DiscoveryCategory>>(
+                    json);
+
+            if (seeded != null)
+            {
+                categories = seeded;
+
+                return;
+            }
+        }
+        catch
+        {
+            // fall through to hardcoded fallback below
+        }
+
         categories.Add(
             new DiscoveryCategory
             {

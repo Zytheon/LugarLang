@@ -28,6 +28,18 @@ public partial class DeveloperLauncher : ContentView
         set;
     }
 
+    public Func<Task>? ExportCategoriesRequested
+    {
+        get;
+        set;
+    }
+
+    public Func<Task>? ExportPlacesRequested
+    {
+        get;
+        set;
+    }
+
     public DeveloperLauncher()
     {
         InitializeComponent();
@@ -81,6 +93,30 @@ $"DeveloperLauncher PropertyChanged: {e.PropertyName}");
     EventArgs e)
     {
         MultiUIEditClicked?.Invoke();
+
+        CloseMenu();
+    }
+
+    private async void OnExportCategoriesClicked(
+    object sender,
+    EventArgs e)
+    {
+        if (ExportCategoriesRequested != null)
+        {
+            await ExportCategoriesRequested();
+        }
+
+        CloseMenu();
+    }
+
+    private async void OnExportPlacesClicked(
+        object sender,
+        EventArgs e)
+    {
+        if (ExportPlacesRequested != null)
+        {
+            await ExportPlacesRequested();
+        }
 
         CloseMenu();
     }

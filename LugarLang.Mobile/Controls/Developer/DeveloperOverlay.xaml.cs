@@ -19,6 +19,8 @@ public partial class DeveloperOverlay : ContentView
 
     private double inspectorStartY;
 
+
+
     private double verticalOffset;
 
     private double overlapChooserStartX;
@@ -47,6 +49,7 @@ public partial class DeveloperOverlay : ContentView
          double TranslationY)>
         sessionInitialPositions = new();
 
+    private bool suppressNextEditorSurfaceTap;
     private bool multiSelectMode;
 
     private readonly List<View>
@@ -119,7 +122,14 @@ public partial class DeveloperOverlay : ContentView
     VisualElement,
     double,
     double>?
-    LayoutChanged
+
+    DeveloperLayoutChanged
+    {
+        get;
+        set;
+    }
+
+    public Action<VisualElement, double, double>? DeveloperSizeChanged
     {
         get;
         set;
@@ -234,6 +244,9 @@ public partial class DeveloperOverlay : ContentView
         redoStack.Clear();
         sessionInitialPositions.Clear();
 
+        System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
+
         selectedElement = null;
 
         editorSurface.IsVisible =
@@ -278,6 +291,14 @@ public partial class DeveloperOverlay : ContentView
         object sender,
         TappedEventArgs e)
     {
+        if (suppressNextEditorSurfaceTap)
+        {
+            suppressNextEditorSurfaceTap =
+                false;
+
+            return;
+        }
+
         if (editableRoot == null)
         {
             return;
@@ -305,6 +326,9 @@ public partial class DeveloperOverlay : ContentView
         {
             if (!multiSelectMode)
             {
+
+                System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
                 selectedElement = null;
 
                 HideSelectionSurface();
@@ -1049,13 +1073,15 @@ EventArgs e)
     private void CloseOverlapChooser()
     {
 
-        System.Diagnostics.Debug.WriteLine(
-       $"MULTISELECT: CloseOverlapChooser called. Count = {multiSelectedElements.Count}");
-
+        suppressNextEditorSurfaceTap =
+    true;
 
         Border? chooser =
             this.FindByName<Border>(
                 "OverlapChooser");
+
+        System.Diagnostics.Debug.WriteLine(
+       $"MULTISELECT: CloseOverlapChooser called. Count = {multiSelectedElements.Count}");
 
         AbsoluteLayout? surface =
             this.FindByName<AbsoluteLayout>(
@@ -1331,8 +1357,14 @@ EventArgs e)
 object sender,
 EventArgs e)
     {
+
+        System.Diagnostics.Debug.WriteLine(
+    $"(i personally added this debug line for if (selectedElement == null)... SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
+
         if (selectedElement == null)
         {
+            System.Diagnostics.Debug.WriteLine(
+                "UNGROUP: selectedElement is null, aborting");
             return;
         }
 
@@ -1376,8 +1408,8 @@ EventArgs e)
     }
 
     private void OnSizeEntryCompleted(
-        object sender,
-        FocusEventArgs e)
+    object sender,
+    FocusEventArgs e)
     {
         System.Diagnostics.Debug.WriteLine(
             "RESIZE: OnSizeEntryCompleted fired");
@@ -1385,9 +1417,15 @@ EventArgs e)
         if (selectedElement == null)
         {
             System.Diagnostics.Debug.WriteLine(
+                $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
+
+            System.Diagnostics.Debug.WriteLine(
                 "RESIZE: selectedElement is null, aborting");
             return;
         }
+
+        System.Diagnostics.Debug.WriteLine(
+            $"RESIZE: selectedElement type = {selectedElement.GetType().Name}");
 
         Entry? widthEntry =
             this.FindByName<Entry>(
@@ -1405,24 +1443,11 @@ EventArgs e)
             return;
         }
 
-        System.Diagnostics.Debug.WriteLine(
-            $"RESIZE: widthEntry.Text='{widthEntry.Text}' heightEntry.Text='{heightEntry.Text}'");
-
-        resizeOperationStartWidth =
+        double finalWidth =
             selectedElement.Width;
 
-        resizeOperationStartHeight =
+        double finalHeight =
             selectedElement.Height;
-
-        if (selectedElement.HorizontalOptions.Alignment == LayoutAlignment.Fill)
-        {
-            selectedElement.HorizontalOptions = LayoutOptions.Start;
-        }
-
-        if (selectedElement.VerticalOptions.Alignment == LayoutAlignment.Fill)
-        {
-            selectedElement.VerticalOptions = LayoutOptions.Start;
-        }
 
         if (double.TryParse(
                 widthEntry.Text,
@@ -1431,13 +1456,8 @@ EventArgs e)
             selectedElement.WidthRequest =
                 newWidth;
 
-            System.Diagnostics.Debug.WriteLine(
-                $"RESIZE: set WidthRequest to {newWidth}");
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine(
-                $"RESIZE: FAILED to parse width '{widthEntry.Text}'");
+            finalWidth =
+                newWidth;
         }
 
         if (double.TryParse(
@@ -1447,21 +1467,13 @@ EventArgs e)
             selectedElement.HeightRequest =
                 newHeight;
 
-            System.Diagnostics.Debug.WriteLine(
-                $"RESIZE: set HeightRequest to {newHeight}");
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine(
-                $"RESIZE: FAILED to parse height '{heightEntry.Text}'");
+            finalHeight =
+                newHeight;
         }
 
         RecordResizeOperation(
-            selectedElement.Width,
-            selectedElement.Height);
-
-        System.Diagnostics.Debug.WriteLine(
-            $"RESIZE: after set, element.Width={selectedElement.Width} element.Height={selectedElement.Height}");
+            finalWidth,
+            finalHeight);
 
         RefreshSelectionVisual();
     }
@@ -1480,6 +1492,8 @@ EventArgs e)
     {
         if (selectedElement == null)
         {
+            System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
             return;
         }
 
@@ -1506,6 +1520,15 @@ EventArgs e)
         redoStack.Clear();
 
         UpdateHistoryButtons();
+
+        System.Diagnostics.Debug.WriteLine(
+    $"RESIZE: DeveloperSizeChanged is {(DeveloperSizeChanged == null ? "NULL" : "SET")}");
+
+
+        DeveloperSizeChanged?.Invoke(
+    selectedElement,
+    newWidth,
+    newHeight);
     }
 
     private string GetElementText(
@@ -1564,6 +1587,8 @@ EventArgs e)
                 false;
         }
 
+        System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
         selectedElement =
             null;
     }
@@ -1582,6 +1607,8 @@ EventArgs e)
     {
         if (selectedElement == null)
         {
+            System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
             HideSelectionSurface();
             return;
         }
@@ -1594,6 +1621,8 @@ EventArgs e)
     {
         if (selectedElement == null)
         {
+            System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
             return;
         }
 
@@ -1682,6 +1711,8 @@ EventArgs e)
     {
         if (selectedElement == null)
         {
+            System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
             return;
         }
 
@@ -1848,7 +1879,7 @@ EventArgs e)
 
         foreach (ElementTransformChange change in changes)
         {
-            LayoutChanged?.Invoke(
+            DeveloperLayoutChanged?.Invoke(
                 change.Element,
                 change.Element.TranslationX,
                 change.Element.TranslationY);
@@ -2050,6 +2081,9 @@ EventArgs e)
 
         sessionInitialPositions.Clear();
 
+        System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
+
         selectedElement =
             null;
 
@@ -2103,6 +2137,9 @@ EventArgs e)
         redoStack.Clear();
 
         sessionInitialPositions.Clear();
+
+        System.Diagnostics.Debug.WriteLine(
+    $"SELECTED ELEMENT CLEARED. Stack: {Environment.StackTrace}");
 
         selectedElement =
             null;

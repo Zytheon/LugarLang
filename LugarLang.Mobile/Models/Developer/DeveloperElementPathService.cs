@@ -13,9 +13,11 @@ public class DeveloperElementPathService
             return string.Empty;
         }
 
-        List<int> indices = new();
+        List<string> segments =
+            new();
 
-        IVisualTreeElement? current = target;
+        IVisualTreeElement? current =
+            target;
 
         while (
             current != null &&
@@ -50,14 +52,24 @@ public class DeveloperElementPathService
                 return string.Empty;
             }
 
-            indices.Add(index);
+            string segment =
+                current is VisualElement currentVisual &&
+                !string.IsNullOrWhiteSpace(currentVisual.AutomationId)
+                    ? $"id:{currentVisual.AutomationId}"
+                    : $"idx:{index}";
 
-            current = parent;
+            segments.Add(
+                segment);
+
+            current =
+                parent;
         }
 
-        indices.Reverse();
+        segments.Reverse();
 
-        return string.Join("/", indices);
+        return string.Join(
+            "/",
+            segments);
     }
 
     public VisualElement? FindByPath(
@@ -69,7 +81,8 @@ public class DeveloperElementPathService
             return root as VisualElement;
         }
 
-        IVisualTreeElement current = root;
+        IVisualTreeElement current =
+            root;
 
         string[] parts =
             path.Split(
@@ -78,21 +91,52 @@ public class DeveloperElementPathService
 
         foreach (string part in parts)
         {
-            if (!int.TryParse(part, out int index))
-            {
-                return null;
-            }
-
             IReadOnlyList<IVisualTreeElement> children =
                 current.GetVisualChildren();
 
-            if (index < 0 ||
-                index >= children.Count)
+            IVisualTreeElement? next =
+                null;
+
+            if (part.StartsWith("id:"))
+            {
+                string targetId =
+                    part.Substring(3);
+
+                foreach (
+                    IVisualTreeElement child
+                    in children)
+                {
+                    if (child is VisualElement childVisual &&
+                        childVisual.AutomationId == targetId)
+                    {
+                        next =
+                            child;
+
+                        break;
+                    }
+                }
+            }
+            else if (
+                part.StartsWith("idx:") &&
+                int.TryParse(
+                    part.Substring(4),
+                    out int index))
+            {
+                if (index >= 0 &&
+                    index < children.Count)
+                {
+                    next =
+                        children[index];
+                }
+            }
+
+            if (next == null)
             {
                 return null;
             }
 
-            current = children[index];
+            current =
+                next;
         }
 
         return current as VisualElement;

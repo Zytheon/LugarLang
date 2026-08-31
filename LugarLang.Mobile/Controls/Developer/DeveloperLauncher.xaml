@@ -53,6 +53,14 @@
                     Clicked="OnMultiUIEditClicked" />
 
                 <Button
+                    Text="📤 Export Categories"
+                    Clicked="OnExportCategoriesClicked" />
+
+                <Button
+                    Text="📤 Export Places"
+                    Clicked="OnExportPlacesClicked" />
+
+                <Button
                     Text="💾 Commit"
                     Clicked="OnCommitClicked" />
 

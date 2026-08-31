@@ -44,15 +44,19 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<Configurations>Debug;Release;Dev;Draft;Beta</Configurations>
+		<Configurations>Debug;Release;Dev;Draft;Beta;Dev</Configurations>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Dev'">
-		<DefineConstants>$(DefineConstants);DEV_TOOLS</DefineConstants>
+		<DefineConstants>$(DefineConstants);DEBUG;DEV_TOOLS</DefineConstants>
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>false</Optimize>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Draft'">
-		<DefineConstants>$(DefineConstants);DEV_TOOLS;DRAFT_GATE</DefineConstants>
+		<DefineConstants>$(DefineConstants);DEBUG;DEV_TOOLS;DRAFT_GATE</DefineConstants>
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>false</Optimize>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Beta'">

@@ -9,12 +9,27 @@ public class PlaceContentService
 
     private List<Place> places = new();
 
+    public string ExportToJson()
+    {
+        return JsonSerializer.Serialize(
+            places,
+            new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+    }
+
     public PlaceContentService()
     {
+
+
         filePath =
             Path.Combine(
                 FileSystem.AppDataDirectory,
                 "places.json");
+        
+        System.Diagnostics.Debug.WriteLine(
+    $"PLACE CONTENT SERVICE FILE PATH: {filePath}");
 
         Load();
 
@@ -140,6 +155,34 @@ public class PlaceContentService
 
     private void LoadDefaultPlaces()
     {
+        try
+        {
+            using Stream stream =
+                FileSystem.OpenAppPackageFileAsync(
+                    "seed_places.json").Result;
+
+            using StreamReader reader =
+                new StreamReader(stream);
+
+            string json =
+                reader.ReadToEnd();
+
+            List<Place>? seeded =
+                JsonSerializer.Deserialize<List<Place>>(
+                    json);
+
+            if (seeded != null)
+            {
+                places = seeded;
+
+                return;
+            }
+        }
+        catch
+        {
+            // fall through to hardcoded fallback below
+        }
+
         places.Add(
             new Place
             {
@@ -151,45 +194,6 @@ public class PlaceContentService
                 Longitude = 124.646,
                 IsFeatured = true,
                 FeaturedOrder = 1
-            });
-
-        places.Add(
-            new Place
-            {
-                Name = "Redtail Shrimps & More",
-                Category = "Food",
-                CategoryId = "food",
-                Region = "Northern Mindanao",
-                Latitude = 8.482,
-                Longitude = 124.647,
-                IsFeatured = true,
-                FeaturedOrder = 2
-            });
-
-        places.Add(
-            new Place
-            {
-                Name = "Bigby's Cafe and Restaurant",
-                Category = "Food",
-                CategoryId = "food",
-                Region = "Northern Mindanao",
-                Latitude = 8.485,
-                Longitude = 124.654,
-                IsFeatured = true,
-                FeaturedOrder = 3
-            });
-
-        places.Add(
-            new Place
-            {
-                Name = "Fat Chef",
-                Category = "Food",
-                CategoryId = "food",
-                Region = "Northern Mindanao",
-                Latitude = 8.482,
-                Longitude = 124.649,
-                IsFeatured = true,
-                FeaturedOrder = 4
             });
     }
 

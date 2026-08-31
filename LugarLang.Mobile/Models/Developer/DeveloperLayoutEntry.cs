@@ -9,4 +9,6 @@ public sealed class DeveloperLayoutEntry
     public double TranslationX { get; set; }
 
     public double TranslationY { get; set; }
+    public double? Width { get; set; }
+    public double? Height { get; set; }
 }

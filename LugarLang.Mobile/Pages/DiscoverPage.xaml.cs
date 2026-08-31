@@ -2,6 +2,7 @@ namespace LugarLang.Mobile.Pages;
 
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Storage;
 using CommunityToolkit.Maui.Views;
 //using Java.Lang.Reflect;
 using LugarLang.Mobile.Controls.Developer;
@@ -10,6 +11,8 @@ using LugarLang.Mobile.Models.Discovery;
 using LugarLang.Mobile.Pages.Developer;
 using LugarLang.Mobile.Services;
 using LugarLang.Mobile.Services.Content;
+using LugarLang.Mobile.Services.Developer;
+
 //using static KotlinX.Serialization.Descriptors.PrimitiveKind;
 
 public partial class DiscoverPage : ContentPage
@@ -48,16 +51,53 @@ public partial class DiscoverPage : ContentPage
     selectedRegion =
         "Northern Mindanao";
 
-        DeveloperLauncherControl.EditUIClicked =
-async () => await LaunchDeveloperEditor();
+#if DEV_TOOLS
+        DeveloperOverlayManager developerOverlayManager =
+            Microsoft.Maui.Controls.Application.Current!
+                .Handler!
+                .MauiContext!
+                .Services
+                .GetRequiredService<DeveloperOverlayManager>();
 
-        DeveloperLauncherControl.MultiUIEditClicked =
-            async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.MultiSelect);
+        developerLauncherControl =
+            new DeveloperLauncher
+            {
+                Margin = new Thickness(0, 0, 16, 16)
+            };
 
-        DeveloperLauncherControl.AddUIElementClicked =
-    async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.AddElement);
+        ((Grid)Content).Children.Add(
+            developerLauncherControl);
+
+        developerLauncherControl.EditUIClicked =
+            async () => await LaunchDeveloperEditor(
+                DeveloperEditorLaunchMode.Normal,
+                developerOverlayManager);
+
+        developerLauncherControl.MultiUIEditClicked =
+            async () => await LaunchDeveloperEditor(
+                DeveloperEditorLaunchMode.MultiSelect,
+                developerOverlayManager);
+
+        developerLauncherControl.ExportCategoriesRequested =
+    async () => await ExportCategoriesAsync();
+
+        developerLauncherControl.ExportPlacesRequested =
+            async () => await ExportPlacesAsync();
+
+        developerLauncherControl.AddUIElementClicked =
+            async () => await LaunchDeveloperEditor(
+                DeveloperEditorLaunchMode.AddElement,
+                developerOverlayManager);
+
+        developerLauncherControl.CommitRequested =
+            developerOverlayManager.CommitAsync;
+#endif
 
     }
+
+#if DEV_TOOLS
+    private DeveloperLauncher? developerLauncherControl;
+#endif
 
     private async void OnNearMeClicked(
         object sender,
@@ -133,21 +173,17 @@ async () => await LaunchDeveloperEditor();
             new ChooseRegionPage(this));
     }
 
-    private async void OnDeveloperEditorTestClicked(
-    object sender,
-    EventArgs e)
-    {
-        await LaunchDeveloperEditor();
-    }
 
+#if DEV_TOOLS
     private async Task LaunchDeveloperEditor(
-        DeveloperEditorLaunchMode launchMode = DeveloperEditorLaunchMode.Normal)
+        DeveloperEditorLaunchMode launchMode,
+        DeveloperOverlayManager developerOverlayManager)
     {
         const double manualOffsetAdjustment = -32;
 
         double verticalOffset =
 #if WINDOWS
-        DeveloperScreenPosition.GetTopOffset(this.Content!) + manualOffsetAdjustment;
+    DeveloperScreenPosition.GetTopOffset(this.Content!) + manualOffsetAdjustment;
 #else
             manualOffsetAdjustment;
 #endif
@@ -156,12 +192,93 @@ async () => await LaunchDeveloperEditor();
             new DeveloperEditorModalPage(
                 this.Content!,
                 verticalOffset,
-                launchMode);
+                launchMode,
+                (element, x, y) =>
+                    developerOverlayManager.RecordLayoutChange(
+                        this,
+                        this.Content!,
+                        element,
+                        x,
+                        y),
+                (element, width, height) =>
+                    developerOverlayManager.RecordLayoutChange(
+                        this,
+                        this.Content!,
+                        element,
+                        element.TranslationX,
+                        element.TranslationY,
+                        width,
+                        height));
 
         await Navigation.PushModalAsync(
             modalPage,
             animated: false);
     }
+#endif
+
+#if DEV_TOOLS
+    private async Task ExportCategoriesAsync()
+    {
+        string json =
+            categoryContentService.ExportToJson();
+
+        using MemoryStream stream =
+            new MemoryStream(
+                System.Text.Encoding.UTF8.GetBytes(json));
+
+        FileSaverResult result =
+            await FileSaver.Default.SaveAsync(
+                "seed_categories.json",
+                stream,
+                CancellationToken.None);
+
+        if (result.IsSuccessful)
+        {
+            await DisplayAlertAsync(
+                "Export Complete",
+                $"Saved to:\n{result.FilePath}",
+                "OK");
+        }
+        else
+        {
+            await DisplayAlertAsync(
+                "Export Failed",
+                result.Exception?.Message ?? "Unknown error",
+                "OK");
+        }
+    }
+
+    private async Task ExportPlacesAsync()
+    {
+        string json =
+            placeContentService.ExportToJson();
+
+        using MemoryStream stream =
+            new MemoryStream(
+                System.Text.Encoding.UTF8.GetBytes(json));
+
+        FileSaverResult result =
+            await FileSaver.Default.SaveAsync(
+                "seed_places.json",
+                stream,
+                CancellationToken.None);
+
+        if (result.IsSuccessful)
+        {
+            await DisplayAlertAsync(
+                "Export Complete",
+                $"Saved to:\n{result.FilePath}",
+                "OK");
+        }
+        else
+        {
+            await DisplayAlertAsync(
+                "Export Failed",
+                result.Exception?.Message ?? "Unknown error",
+                "OK");
+        }
+    }
+#endif
 
     private List<DiscoveryCategory> GetEnabledCategories()
     {
@@ -354,10 +471,10 @@ async () => await LaunchDeveloperEditor();
     }
 
     private async void OnEditPlaceClicked(
-    object sender,
-    EventArgs e)
+        object? sender,
+        EventArgs e)
     {
-        if (selectedPlace == null)
+        if (sender is not Button button)
         {
             return;
         }
@@ -369,9 +486,10 @@ async () => await LaunchDeveloperEditor();
     }
 
     private async void OnEditCategoryClicked(
-    object sender,
-    EventArgs e)
+        object? sender,
+        EventArgs e)
     {
+
         if (sender is not Button button)
         {
             return;
@@ -390,8 +508,8 @@ async () => await LaunchDeveloperEditor();
     }
 
     private async void OnDeleteCategoryClicked(
-    object sender,
-    EventArgs e)
+        object? sender,
+        EventArgs e)
     {
         if (sender is not Button button)
         {
@@ -611,16 +729,25 @@ async () => await LaunchDeveloperEditor();
         System.Diagnostics.Debug.WriteLine(
             "DISCOVER ONAPPEARING FIRED");
 
-        System.Diagnostics.Debug.WriteLine(
-            $"DEVELOPER LAUNCHER VISIBLE CHECK: " +
-            $"DeveloperLauncherControl.IsVisible={DeveloperLauncherControl.IsVisible}");
-
         RefreshDiscoveryCategories();
+
+#if DEV_TOOLS
+        DeveloperOverlayManager developerOverlayManager =
+            Microsoft.Maui.Controls.Application.Current!
+                .Handler!
+                .MauiContext!
+                .Services
+                .GetRequiredService<DeveloperOverlayManager>();
+
+        developerOverlayManager.RestoreLayout(
+            this,
+            this.Content!);
+#endif
     }
 
     private async void OnAddCategoryClicked(
-    object sender,
-    EventArgs e)
+        object? sender,
+        EventArgs e)
     {
         await Navigation.PushAsync(
             new AddCategoryPage(
@@ -628,8 +755,8 @@ async () => await LaunchDeveloperEditor();
     }
 
     private void OnRefreshClicked(
-    object sender,
-    EventArgs e)
+        object? sender,
+        EventArgs e)
     {
         categoryContentService.Reload();
 
