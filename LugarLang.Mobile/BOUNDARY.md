@@ -1,12 +1,17 @@
 #UI and Scaffolding
-
-
-#Generic infra
+Models
 Pages
 DiscoverPage.xaml
 DiscoverPage.xaml.cs
 
+#Generic infra
+LugarLang.Mobile.csproj
+App.xaml
+App.xaml.cs
+AppShell.xaml
+AppShell.xaml.cs
+
+
 #Proprietary logic
-Models
 Developer
 DeveloperElementPathService.cs
