@@ -1,5 +1,4 @@
 #UI and Scaffolding
-Models
 Pages
 DiscoverPage.xaml
 DiscoverPage.xaml.cs
