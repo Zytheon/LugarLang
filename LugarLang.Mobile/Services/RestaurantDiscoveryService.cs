@@ -1,5 +1,6 @@
-﻿using LugarLang.Mobile.Models;
-using LugarLang.Mobile.Services.Content;
+﻿
+using LugarLang.Internal.Services.Content;
+using LugarLang.Internal.Models;
 
 namespace LugarLang.Mobile.Services;
 

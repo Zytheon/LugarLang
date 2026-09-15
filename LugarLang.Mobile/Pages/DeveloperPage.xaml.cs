@@ -1,3 +1,5 @@
+using LugarLang.Internal.Pages;
+
 namespace LugarLang.Mobile.Pages;
 
 public partial class DeveloperPage : ContentPage

@@ -1,4 +1,4 @@
-﻿using LugarLang.Mobile.Services.Developer;
+﻿using LugarLang.Internal.Services.Developer;
 
 namespace LugarLang.Mobile;
 

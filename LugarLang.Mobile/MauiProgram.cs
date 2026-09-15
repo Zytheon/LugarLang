@@ -1,4 +1,4 @@
-﻿using LugarLang.Mobile.Services.Developer;
+﻿using LugarLang.Internal.Services.Developer;
 using Microsoft.Extensions.Logging;
 using Shiny;
 using SkiaSharp.Views.Maui.Controls.Hosting;

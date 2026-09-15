@@ -1,8 +1,8 @@
 ﻿using CdoGtfsConverter.Models;
+using LugarLang.Internal.Services;
 using LugarLang.Mobile.Services;
 using LugarLang.Mobile.Services.Transit;
-
-namespace LugarLang.Mobile.Pages;
+namespace LugarLang.Internal.Pages;
 
 public partial class DiagnosticsPage : ContentPage
 {

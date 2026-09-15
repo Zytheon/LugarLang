@@ -208,13 +208,5 @@ public partial class MainPage : ContentPage
         ResultsLabel.Text = output;
     }
 
-
-    private async void DiagnosticsButton_Clicked(
-        object? sender,
-        EventArgs e)
-    {
-        await Navigation.PushAsync(
-            new Pages.DiagnosticsPage());
-    }
 }
 

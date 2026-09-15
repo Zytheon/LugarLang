@@ -4,12 +4,19 @@ using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 //using Java.Lang.Reflect;
-using LugarLang.Mobile.Controls.Developer;
+using LugarLang.Internal.Controls.Developer;
+using LugarLang.Internal.Models;
+using LugarLang.Internal.Models.Discovery;
+using LugarLang.Internal.Pages.Developer;
+using LugarLang.Internal.Services;
+using LugarLang.Internal.Services.Content;
+using LugarLang.Internal.Pages;
+
+#if WINDOWS
+using LugarLang.Mobile.Platforms.Windows;
+#endif
 using LugarLang.Mobile.Models;
-using LugarLang.Mobile.Models.Discovery;
-using LugarLang.Mobile.Pages.Developer;
 using LugarLang.Mobile.Services;
-using LugarLang.Mobile.Services.Content;
 //using static KotlinX.Serialization.Descriptors.PrimitiveKind;
 
 public partial class DiscoverPage : ContentPage
@@ -133,12 +140,6 @@ async () => await LaunchDeveloperEditor();
             new ChooseRegionPage(this));
     }
 
-    private async void OnDeveloperEditorTestClicked(
-    object sender,
-    EventArgs e)
-    {
-        await LaunchDeveloperEditor();
-    }
 
     private async Task LaunchDeveloperEditor(
         DeveloperEditorLaunchMode launchMode = DeveloperEditorLaunchMode.Normal)

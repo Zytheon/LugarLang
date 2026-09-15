@@ -1,4 +1,6 @@
-﻿namespace LugarLang.Mobile.Pages;
+﻿
+
+namespace LugarLang.Mobile.Pages;
 
 public class ChooseRegionPage : ContentPage
 {
