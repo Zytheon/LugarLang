@@ -29,6 +29,10 @@ public partial class DiscoverPage : ContentPage
         restaurantDiscoveryService;
     private readonly PlaceContentService
     placeContentService;
+
+    private readonly ContentSyncService
+    contentSyncService;
+
     private readonly bool isDeveloperMode = true;
 
     private string? selectedRegion;
@@ -48,7 +52,16 @@ public partial class DiscoverPage : ContentPage
         placeContentService =
         new PlaceContentService();
 
-    restaurantDiscoveryService =
+        contentSyncService =
+new ContentSyncService(
+    new HttpClient
+    {
+        BaseAddress = new Uri("https://localhost:7234")
+    },
+    categoryContentService,
+    placeContentService);
+
+        restaurantDiscoveryService =
         new RestaurantDiscoveryService(
             placeContentService);
 
@@ -195,6 +208,9 @@ async () => await LaunchDeveloperEditor();
     HorizontalStackLayout
         parentLayout)
     {
+
+        System.Diagnostics.Debug.WriteLine($"PLACE ID: {place.Id} NAME: {place.Name}");
+
         Grid card =
             new Grid
             {
@@ -387,7 +403,8 @@ async () => await LaunchDeveloperEditor();
         await Navigation.PushAsync(
             new EditCategoryPage(
                 category,
-                categoryContentService));
+                categoryContentService,
+                placeContentService));
     }
 
     private async void OnDeleteCategoryClicked(
@@ -605,7 +622,7 @@ async () => await LaunchDeveloperEditor();
         RefreshDiscoveryCategories();
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
 
@@ -615,6 +632,8 @@ async () => await LaunchDeveloperEditor();
         System.Diagnostics.Debug.WriteLine(
             $"DEVELOPER LAUNCHER VISIBLE CHECK: " +
             $"DeveloperLauncherControl.IsVisible={DeveloperLauncherControl.IsVisible}");
+
+        await contentSyncService.SyncAsync();
 
         RefreshDiscoveryCategories();
     }
@@ -635,6 +654,8 @@ async () => await LaunchDeveloperEditor();
         categoryContentService.Reload();
 
         placeContentService.Reload();
+
+        _ = contentSyncService.SyncAsync(force: true);
 
         RefreshDiscoveryCategories();
     }

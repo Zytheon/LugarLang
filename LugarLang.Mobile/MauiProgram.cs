@@ -1,8 +1,10 @@
-﻿using LugarLang.Internal.Services.Developer;
+﻿using CommunityToolkit.Maui;
+using LugarLang.Internal.Services.Content;
+using LugarLang.Internal.Services.Developer;
+using LugarLang.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using Shiny;
 using SkiaSharp.Views.Maui.Controls.Hosting;
-using CommunityToolkit.Maui;
 
 namespace LugarLang.Mobile;
 
@@ -33,6 +35,15 @@ public static class MauiProgram
     DeveloperOverlayManager>();
         builder.Services.AddSingleton<
     DeveloperLayoutPersistenceService>();
+
+        builder.Services.AddSingleton<CategoryContentService>();
+        builder.Services.AddSingleton<PlaceContentService>();
+
+        //API Services
+        builder.Services.AddHttpClient<ContentSyncService>(client =>
+        {
+            client.BaseAddress = new Uri("https://localhost:7234");
+        });
 
 #if DEBUG
         builder.Logging.AddDebug();
