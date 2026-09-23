@@ -33,15 +33,18 @@ public partial class DiscoverPage : ContentPage
     private readonly ContentSyncService
     contentSyncService;
 
+#if DEV
     private readonly bool isDeveloperMode = true;
+#else
+    private readonly bool isDeveloperMode = false;
+#endif
 
     private string? selectedRegion;
     private Place? selectedPlace;
 
-    public DiscoverPage(
-    bool isDeveloperMode = false)
-{
-    InitializeComponent();
+    public DiscoverPage()
+    {
+        InitializeComponent();
 
     regionService =
         new RegionService();
@@ -56,7 +59,7 @@ public partial class DiscoverPage : ContentPage
 new ContentSyncService(
     new HttpClient
     {
-        BaseAddress = new Uri("https://localhost:7234")
+        BaseAddress = new Uri("https://lugarlang-api.onrender.com")
     },
     categoryContentService,
     placeContentService);
@@ -76,6 +79,8 @@ async () => await LaunchDeveloperEditor();
 
         DeveloperLauncherControl.AddUIElementClicked =
     async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.AddElement);
+
+        DeveloperLauncherControl.IsVisible = isDeveloperMode;
 
     }
 

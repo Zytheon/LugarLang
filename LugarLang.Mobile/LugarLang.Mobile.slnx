@@ -1,16 +1,12 @@
 <Solution>
   <Configurations>
-    <BuildType Name="Beta" />
     <BuildType Name="Debug" />
     <BuildType Name="Dev" />
-    <BuildType Name="Draft" />
     <BuildType Name="Release" />
   </Configurations>
   <Project Path="../../CdoGtfsConverter/CdoGtfsConverter.Backend/CdoGtfsConverter.csproj" />
   <Project Path="../../LugarLang-Internal/LugarLang.Internal.csproj">
-    <BuildType Solution="Beta|*" Project="Debug" />
     <BuildType Solution="Dev|*" Project="Release" />
-    <BuildType Solution="Draft|*" Project="Release" />
   </Project>
   <Project Path="LugarLang.Mobile.csproj">
     <Deploy />
