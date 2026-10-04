@@ -1,8 +1,4 @@
 namespace LugarLang.Mobile.Pages;
-
-using CommunityToolkit.Maui;
-using CommunityToolkit.Maui.Extensions;
-using CommunityToolkit.Maui.Views;
 //using Java.Lang.Reflect;
 using LugarLang.Internal.Models;
 using LugarLang.Internal.Models.Discovery;

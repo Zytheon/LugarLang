@@ -19,11 +19,6 @@
             ContentTemplate="{DataTemplate pages:MapPage}"
             Route="MapPage" />
 
-        <ShellContent
-            Title="Developer"
-            ContentTemplate="{DataTemplate pages:DeveloperPage}"
-            Route="DeveloperPage" />
-
     </TabBar>
 
 </Shell>

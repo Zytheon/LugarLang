@@ -107,10 +107,6 @@
 	<!-- XAML Files -->
 	<ItemGroup>
 
-		<MauiXaml Update="Pages\DeveloperPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-
 		<MauiXaml Update="Pages\DiscoverPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
