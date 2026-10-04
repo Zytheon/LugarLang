@@ -29,6 +29,17 @@ public class RoutingDebugInfo
 
     public int RidePreferenceRank { get; set; }
 
+    /// <summary>
+    /// Other journeys grouped with this one by JourneyGroupingService
+    /// (same physical boarding/alighting area, different route ID/name).
+    /// This entry is always the group's cheapest member (the
+    /// "representative") -- GroupMembers holds the OTHER members only,
+    /// never a duplicate of this entry itself. Empty for an ungrouped
+    /// journey or a journey that was the only one in its group.
+    /// </summary>
+    public List<RoutingDebugInfo> GroupMembers { get; set; } =
+        new();
+
     public string RouteSummary
     {
         get

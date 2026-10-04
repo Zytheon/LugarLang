@@ -1,16 +1,17 @@
 ﻿using Mapsui.UI.Maui;
 
-namespace LugarLang.Mobile.UI.Layout;
+namespace LugarLang.Mobile.Services.UI.Layout;
 
 public class MapPageLayoutBuilder
 {
     public Grid Build(
         MapControl mapControl,
-        View routingCandidateView,
+        Microsoft.Maui.Controls.View routingCandidateView,
         Picker routePicker,
         Picker walkingDistancePicker,
         Button fromButton,
         Button toButton,
+        Microsoft.Maui.Controls.View algorithmToggle,
         double width)
     {
         if (width <= 700)
@@ -21,7 +22,8 @@ public class MapPageLayoutBuilder
                 routePicker,
                 walkingDistancePicker,
                 fromButton,
-                toButton);
+                toButton,
+                algorithmToggle);
         }
 
         return BuildDesktopLayout(
@@ -30,16 +32,18 @@ public class MapPageLayoutBuilder
             routePicker,
             walkingDistancePicker,
             fromButton,
-            toButton);
+            toButton,
+            algorithmToggle);
     }
 
     private Grid BuildDesktopLayout(
         MapControl mapControl,
-        View routingCandidateView,
+        Microsoft.Maui.Controls.View routingCandidateView,
         Picker routePicker,
         Picker walkingDistancePicker,
         Button fromButton,
-        Button toButton)
+        Button toButton,
+        Microsoft.Maui.Controls.View algorithmToggle)
     {
         Grid controls =
             new()
@@ -47,6 +51,7 @@ public class MapPageLayoutBuilder
                 ColumnDefinitions =
                 {
                     new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
                     new ColumnDefinition(GridLength.Auto),
                     new ColumnDefinition(GridLength.Auto),
                     new ColumnDefinition(GridLength.Auto)
@@ -57,11 +62,13 @@ public class MapPageLayoutBuilder
         Grid.SetColumn(walkingDistancePicker, 1);
         Grid.SetColumn(fromButton, 2);
         Grid.SetColumn(toButton, 3);
+        Grid.SetColumn(algorithmToggle, 4);
 
         controls.Children.Add(routePicker);
         controls.Children.Add(walkingDistancePicker);
         controls.Children.Add(fromButton);
         controls.Children.Add(toButton);
+        controls.Children.Add(algorithmToggle);
 
         Grid mainContent =
             new()
@@ -100,15 +107,21 @@ public class MapPageLayoutBuilder
 
     private Grid BuildPhoneLayout(
         MapControl mapControl,
-        View routingCandidateView,
+        Microsoft.Maui.Controls.View routingCandidateView,
         Picker routePicker,
         Picker walkingDistancePicker,
         Button fromButton,
-        Button toButton)
+        Button toButton,
+        Microsoft.Maui.Controls.View algorithmToggle)
     {
         Grid controls =
             new()
             {
+                RowDefinitions =
+                {
+                    new RowDefinition(GridLength.Auto),
+                    new RowDefinition(GridLength.Auto)
+                },
                 ColumnDefinitions =
                 {
                     new ColumnDefinition(GridLength.Star),
@@ -123,10 +136,14 @@ public class MapPageLayoutBuilder
         Grid.SetColumn(fromButton, 2);
         Grid.SetColumn(toButton, 3);
 
+        Grid.SetRow(algorithmToggle, 1);
+        Grid.SetColumnSpan(algorithmToggle, 4);
+
         controls.Children.Add(routePicker);
         controls.Children.Add(walkingDistancePicker);
         controls.Children.Add(fromButton);
         controls.Children.Add(toButton);
+        controls.Children.Add(algorithmToggle);
 
         Grid mainContent =
             new()
@@ -163,6 +180,3 @@ public class MapPageLayoutBuilder
         return layout;
     }
 }
-
-
-

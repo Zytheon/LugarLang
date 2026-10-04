@@ -2,6 +2,8 @@
 using LugarLang.Mobile.Services.Mapping.Factories;
 using Mapsui;
 using Mapsui.Layers;
+using Mapsui.Nts;
+using Mapsui.Styles;
 using Mapsui.UI.Maui;
 
 namespace LugarLang.Mobile.Services.Mapping;
@@ -10,7 +12,8 @@ public class RouteDisplayService
 {
     private readonly RouteLayerFactory routeLayerFactory;
 
-    private MemoryLayer? stopLayer;
+    private MemoryLayer? inboundLayer;
+    private MemoryLayer? outboundLayer;
 
     public RouteDisplayService(
         RouteLayerFactory routeLayerFactory)
@@ -97,24 +100,37 @@ public class RouteDisplayService
                     centerY),
                 resolution);
     }
-
     public void DisplayRoute(
-        MapControl mapControl,
-        Route route,
-        GeoPoint? fromPoint,
-        GeoPoint? toPoint)
+    MapControl mapControl,
+    Route route,
+    GeoPoint? fromPoint,
+    GeoPoint? toPoint)
     {
         RemoveCurrentRouteLayers(
             mapControl);
 
-        if (route.Stops.Count > 0)
+        if (route.Inbound?.Path.Count > 1)
         {
-            stopLayer =
-                routeLayerFactory.CreateStopLayer(
-                    route.Stops);
+            inboundLayer =
+                BuildPathLayer(
+                    route.Inbound.Path,
+                    "Inbound Path",
+                    Mapsui.Styles.Color.DodgerBlue);
 
             mapControl.Map?.Layers.Add(
-                stopLayer);
+                inboundLayer);
+        }
+
+        if (route.Outbound?.Path.Count > 1)
+        {
+            outboundLayer =
+                BuildPathLayer(
+                    route.Outbound.Path,
+                    "Outbound Path",
+                    Mapsui.Styles.Color.Orange);
+
+            mapControl.Map?.Layers.Add(
+                outboundLayer);
         }
 
         CenterMapOnPoints(
@@ -123,17 +139,65 @@ public class RouteDisplayService
             toPoint);
     }
 
+    private MemoryLayer BuildPathLayer(
+        IList<GeoPoint> path,
+        string name,
+        Mapsui.Styles.Color color)
+    {
+        List<NetTopologySuite.Geometries.Coordinate> coordinates =
+            new();
+
+        foreach (GeoPoint point in path)
+        {
+            var projected =
+                Mapsui.Projections.SphericalMercator
+                    .FromLonLat(
+                        point.Longitude,
+                        point.Latitude);
+
+            coordinates.Add(
+                new NetTopologySuite.Geometries.Coordinate(
+                    projected.x,
+                    projected.y));
+        }
+
+        NetTopologySuite.Geometries.LineString lineString =
+            new(coordinates.ToArray());
+
+        GeometryFeature feature =
+            new()
+            {
+                Geometry = lineString
+            };
+
+        feature.Styles.Add(
+            new VectorStyle
+            {
+                Line = new Pen(color, 5)
+            });
+
+        return new MemoryLayer
+        {
+            Name = name,
+            Features = new List<IFeature> { feature }
+        };
+    }
+
     public void RemoveCurrentRouteLayers(
         MapControl mapControl)
     {
-        if (stopLayer != null)
+        if (inboundLayer != null)
         {
-            mapControl.Map?.Layers.Remove(
-                stopLayer);
+            mapControl.Map?.Layers.Remove(inboundLayer);
+            inboundLayer = null;
+        }
 
-            stopLayer = null;
+        if (outboundLayer != null)
+        {
+            mapControl.Map?.Layers.Remove(outboundLayer);
+            outboundLayer = null;
         }
     }
 
-    
+
 }

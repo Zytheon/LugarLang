@@ -4,18 +4,12 @@ using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 //using Java.Lang.Reflect;
-using LugarLang.Internal.Controls.Developer;
 using LugarLang.Internal.Models;
 using LugarLang.Internal.Models.Discovery;
-using LugarLang.Internal.Pages.Developer;
+using LugarLang.Internal.Controls.Developer;
 using LugarLang.Internal.Services;
 using LugarLang.Internal.Services.Content;
 using LugarLang.Internal.Pages;
-
-#if WINDOWS
-using LugarLang.Mobile.Platforms.Windows;
-#endif
-using LugarLang.Mobile.Models;
 using LugarLang.Mobile.Services;
 //using static KotlinX.Serialization.Descriptors.PrimitiveKind;
 
@@ -46,11 +40,11 @@ public partial class DiscoverPage : ContentPage
     {
         InitializeComponent();
 
-    regionService =
-        new RegionService();
+        regionService =
+            new RegionService();
 
-    categoryContentService =
-        new CategoryContentService();
+        categoryContentService =
+            new CategoryContentService();
 
         placeContentService =
         new PlaceContentService();
@@ -68,19 +62,9 @@ new ContentSyncService(
         new RestaurantDiscoveryService(
             placeContentService);
 
-    selectedRegion =
-        "Northern Mindanao";
+        selectedRegion =
+            "Northern Mindanao";
 
-        DeveloperLauncherControl.EditUIClicked =
-async () => await LaunchDeveloperEditor();
-
-        DeveloperLauncherControl.MultiUIEditClicked =
-            async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.MultiSelect);
-
-        DeveloperLauncherControl.AddUIElementClicked =
-    async () => await LaunchDeveloperEditor(DeveloperEditorLaunchMode.AddElement);
-
-        DeveloperLauncherControl.IsVisible = isDeveloperMode;
 
     }
 
@@ -159,28 +143,6 @@ async () => await LaunchDeveloperEditor();
     }
 
 
-    private async Task LaunchDeveloperEditor(
-        DeveloperEditorLaunchMode launchMode = DeveloperEditorLaunchMode.Normal)
-    {
-        const double manualOffsetAdjustment = -32;
-
-        double verticalOffset =
-#if WINDOWS
-        DeveloperScreenPosition.GetTopOffset(this.Content!) + manualOffsetAdjustment;
-#else
-            manualOffsetAdjustment;
-#endif
-
-        DeveloperEditorModalPage modalPage =
-            new DeveloperEditorModalPage(
-                this.Content!,
-                verticalOffset,
-                launchMode);
-
-        await Navigation.PushModalAsync(
-            modalPage,
-            animated: false);
-    }
 
     private List<DiscoveryCategory> GetEnabledCategories()
     {
@@ -207,7 +169,7 @@ async () => await LaunchDeveloperEditor();
             .ToList();
     }
 
-    
+
     private Grid CreatePlaceCard(
     Place place,
     HorizontalStackLayout
@@ -633,10 +595,6 @@ async () => await LaunchDeveloperEditor();
 
         System.Diagnostics.Debug.WriteLine(
             "DISCOVER ONAPPEARING FIRED");
-
-        System.Diagnostics.Debug.WriteLine(
-            $"DEVELOPER LAUNCHER VISIBLE CHECK: " +
-            $"DeveloperLauncherControl.IsVisible={DeveloperLauncherControl.IsVisible}");
 
         await contentSyncService.SyncAsync();
 

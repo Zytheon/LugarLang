@@ -8,7 +8,19 @@ public class RoutingCandidateCard : Border
 {
     public RoutingDebugInfo Candidate { get; }
 
+    /// <summary>
+    /// Fired when the card itself (the group's representative) is
+    /// tapped -- unchanged from before grouping existed.
+    /// </summary>
     public event EventHandler? Selected;
+
+    /// <summary>
+    /// Fired when the user taps one of the expanded alternates under
+    /// "Show N similar options". Carries that specific member's
+    /// RoutingDebugInfo so the caller can select IT instead of the
+    /// representative.
+    /// </summary>
+    public event EventHandler<RoutingDebugInfo>? MemberSelected;
 
     public RoutingCandidateCard(
         RoutingDebugInfo candidate)
@@ -193,7 +205,112 @@ public class RoutingCandidateCard : Border
                 FontSize = 12
             });
 
+        if (Candidate.GroupMembers.Count > 0)
+        {
+            layout.Children.Add(
+                CreateGroupExpansion());
+        }
+
         return layout;
+    }
+
+    /// <summary>
+    /// Builds the "Show N similar options" toggle plus the (initially
+    /// hidden) list of alternates it reveals. Each alternate is its own
+    /// tappable row -- tapping it fires MemberSelected, not Selected, so
+    /// the caller knows to select that specific journey instead of the
+    /// group's representative.
+    ///
+    /// NOTE: this relies on a MAUI Button's Clicked handling NOT
+    /// bubbling up to the Border's own TapGestureRecognizer (which
+    /// would otherwise also fire Selected on every expand/collapse
+    /// tap). That's normal MAUI behavior, but wasn't verified against
+    /// a running build -- if tapping "Show N similar options" also
+    /// triggers the card's main Selected event, that's the first thing
+    /// to check.
+    /// </summary>
+    private View CreateGroupExpansion()
+    {
+        VerticalStackLayout membersLayout =
+            new()
+            {
+                Spacing = 6,
+                Margin = new Thickness(8, 4, 0, 0),
+                IsVisible = false
+            };
+
+        foreach (
+            RoutingDebugInfo member
+            in Candidate.GroupMembers)
+        {
+            Label memberLabel =
+                new()
+                {
+                    Text =
+                        $"• {member.RouteSummary} — " +
+                        $"walk {member.TotalWalkingDistance:F0}m, " +
+                        $"ride {member.RideDistanceMeters:F0}m",
+
+                    FontSize = 12,
+
+                    TextColor =
+                        Colors.CornflowerBlue
+                };
+
+            TapGestureRecognizer memberTap =
+                new();
+
+            memberTap.Tapped +=
+                (sender, args) =>
+                {
+                    MemberSelected?.Invoke(
+                        this,
+                        member);
+                };
+
+            memberLabel.GestureRecognizers.Add(
+                memberTap);
+
+            membersLayout.Children.Add(
+                memberLabel);
+        }
+
+        Button expandButton =
+            new()
+            {
+                Text =
+                    $"Show {Candidate.GroupMembers.Count} " +
+                    $"similar option(s)",
+
+                FontSize = 12
+            };
+
+        expandButton.Clicked +=
+            (sender, args) =>
+            {
+                membersLayout.IsVisible =
+                    !membersLayout.IsVisible;
+
+                expandButton.Text =
+                    membersLayout.IsVisible
+                        ? "Hide similar options"
+                        : $"Show {Candidate.GroupMembers.Count} " +
+                          $"similar option(s)";
+            };
+
+        VerticalStackLayout wrapper =
+            new()
+            {
+                Spacing = 4
+            };
+
+        wrapper.Children.Add(
+            expandButton);
+
+        wrapper.Children.Add(
+            membersLayout);
+
+        return wrapper;
     }
 
     private void OnTapped(

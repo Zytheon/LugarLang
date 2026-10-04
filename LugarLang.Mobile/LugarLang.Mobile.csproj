@@ -111,10 +111,6 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
-		<MauiXaml Update="Pages\DiagnosticsPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-
 		<MauiXaml Update="Pages\DiscoverPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>

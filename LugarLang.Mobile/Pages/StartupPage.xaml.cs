@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using LugarLang.Internal.Services.Developer;
-
 namespace LugarLang.Mobile.Pages;
 
 public partial class StartupPage : ContentPage
@@ -14,19 +11,12 @@ public partial class StartupPage : ContentPage
     {
         base.OnAppearing();
 
+        System.Diagnostics.Debug.WriteLine(
+            "DISCOVER ONAPPEARING FIRED");
+
         await Task.Delay(1000);
 
-        DeveloperOverlayManager
-            developerOverlayManager =
-                Microsoft.Maui.Controls.Application.Current!
-                    .Handler!
-                    .MauiContext!
-                    .Services
-                    .GetRequiredService<
-                        DeveloperOverlayManager>();
-
         Microsoft.Maui.Controls.Application.Current!.MainPage =
-            new AppShell(
-                developerOverlayManager);
+            new AppShell();
     }
 }

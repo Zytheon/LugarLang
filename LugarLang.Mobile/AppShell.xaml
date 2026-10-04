@@ -10,9 +10,9 @@
     <TabBar>
 
         <ShellContent
-    Title="Discover"
-    ContentTemplate="{DataTemplate pages:DiscoverPage}"
-    Route="DiscoverPage" />
+            Title="Discover"
+            ContentTemplate="{DataTemplate pages:DiscoverPage}"
+            Route="DiscoverPage" />
 
         <ShellContent
             Title="Map"
@@ -23,9 +23,7 @@
             Title="Developer"
             ContentTemplate="{DataTemplate pages:DeveloperPage}"
             Route="DeveloperPage" />
-        
+
     </TabBar>
 
 </Shell>
-
-

@@ -8,6 +8,18 @@ public class RoutingCandidateView : ContentView
 {
     private readonly VerticalStackLayout contentLayout;
 
+    private readonly JourneyGroupingService journeyGroupingService =
+        new();
+
+    /// <summary>
+    /// Replaces the old "top 5 journeys" cap. Now caps GROUPS, not raw
+    /// journeys -- since a group can absorb several near-duplicate
+    /// routes into one row, 10 groups represents meaningfully more
+    /// diversity than 10 (or even 5) ungrouped journeys did. Tune this
+    /// once you've seen it against a few real queries.
+    /// </summary>
+    private const int MaximumGroupsShown = 10;
+
     private RoutingDebugSnapshot? currentSnapshot;
 
     private enum SortMode
@@ -44,9 +56,20 @@ public class RoutingCandidateView : ContentView
         IEnumerable<Journey> journeys,
         double maximumWalkingDistanceMeters)
     {
-        List<Journey> journeyList =
-            SelectRepresentativeJourneys(
-                journeys.ToList());
+        List<Journey> allJourneys =
+            journeys.ToList();
+
+        List<JourneyGroup> groups =
+            journeyGroupingService.Group(
+                allJourneys);
+
+        List<JourneyGroup> topGroups =
+            groups
+                .OrderBy(
+                    group =>
+                        group.Representative.TotalWalkingDistanceMeters)
+                .Take(MaximumGroupsShown)
+                .ToList();
 
         currentSnapshot =
             new RoutingDebugSnapshot
@@ -56,13 +79,35 @@ public class RoutingCandidateView : ContentView
             };
 
         List<RoutingDebugInfo> debugCandidates =
-            journeyList
-                .Select(
-                    journey =>
-                        CreateDebugInfo(
-                            journey,
-                            maximumWalkingDistanceMeters))
-                .ToList();
+            new();
+
+        foreach (
+            JourneyGroup group
+            in topGroups)
+        {
+            RoutingDebugInfo representativeInfo =
+                CreateDebugInfo(
+                    group.Representative,
+                    maximumWalkingDistanceMeters);
+
+            List<Journey> otherMembers =
+                group.Members
+                    .Where(member => member != group.Representative)
+                    .OrderBy(member => member.TotalWalkingDistanceMeters)
+                    .ToList();
+
+            representativeInfo.GroupMembers =
+                otherMembers
+                    .Select(
+                        member =>
+                            CreateDebugInfo(
+                                member,
+                                maximumWalkingDistanceMeters))
+                    .ToList();
+
+            debugCandidates.Add(
+                representativeInfo);
+        }
 
         List<RoutingDebugInfo> walkRanked =
             debugCandidates
@@ -107,109 +152,6 @@ public class RoutingCandidateView : ContentView
         Rebuild();
     }
 
-    private List<Journey> SelectRepresentativeJourneys(
-    List<Journey> journeys)
-    {
-        List<Journey> nonDominated =
-            journeys
-                .Where(journey =>
-                    !journeys.Any(
-                        other =>
-                            other != journey &&
-                            other.TotalWalkingDistanceMeters <=
-                                journey.TotalWalkingDistanceMeters &&
-                            other.TotalRideDistanceMeters <=
-                                journey.TotalRideDistanceMeters &&
-                            (
-                                other.TotalWalkingDistanceMeters <
-                                    journey.TotalWalkingDistanceMeters ||
-                                other.TotalRideDistanceMeters <
-                                    journey.TotalRideDistanceMeters
-                            )))
-                .ToList();
-
-        if (nonDominated.Count <= 5)
-        {
-            return nonDominated
-                .OrderBy(
-                    journey =>
-                        journey.TotalWalkingDistanceMeters)
-                .ToList();
-        }
-
-        List<Journey> ordered =
-            nonDominated
-                .OrderBy(
-                    journey =>
-                        journey.TotalWalkingDistanceMeters)
-                .ToList();
-
-        List<Journey> selected =
-            new();
-
-        AddJourneyIfMissing(
-            selected,
-            ordered.First());
-
-        AddJourneyIfMissing(
-            selected,
-            ordered.Last());
-
-        if (selected.Count < 5)
-        {
-            AddJourneyIfMissing(
-                selected,
-                ordered[ordered.Count / 2]);
-        }
-
-        if (selected.Count < 5)
-        {
-            AddJourneyIfMissing(
-                selected,
-                ordered[ordered.Count / 4]);
-        }
-
-        if (selected.Count < 5)
-        {
-            AddJourneyIfMissing(
-                selected,
-                ordered[
-                    (ordered.Count * 3) / 4]);
-        }
-
-        if (selected.Count < 5)
-        {
-            foreach (
-                Journey journey
-                in ordered)
-            {
-                AddJourneyIfMissing(
-                    selected,
-                    journey);
-
-                if (selected.Count == 5)
-                {
-                    break;
-                }
-            }
-        }
-
-        return selected
-            .OrderBy(
-                journey =>
-                    journey.TotalWalkingDistanceMeters)
-            .ToList();
-    }
-
-    private void AddJourneyIfMissing(
-    List<Journey> selected,
-    Journey journey)
-    {
-        if (!selected.Contains(journey))
-        {
-            selected.Add(journey);
-        }
-    }
     private RoutingDebugInfo CreateDebugInfo(
         Journey journey,
         double maximumWalkingDistanceMeters)
@@ -329,6 +271,9 @@ public class RoutingCandidateView : ContentView
             card.Selected +=
                 CandidateCard_Selected;
 
+            card.MemberSelected +=
+                CandidateCard_MemberSelected;
+
             contentLayout.Children.Add(
                 card);
         }
@@ -336,12 +281,18 @@ public class RoutingCandidateView : ContentView
 
     private void AddHeader()
     {
+        int totalJourneys =
+            currentSnapshot!.Candidates.Sum(
+                candidate =>
+                    1 + candidate.GroupMembers.Count);
+
         contentLayout.Children.Add(
             new Label
             {
                 Text =
-                    $"Journeys " +
-                    $"({currentSnapshot!.Candidates.Count})",
+                    $"Route options " +
+                    $"({currentSnapshot.Candidates.Count} groups, " +
+                    $"{totalJourneys} journeys total)",
 
                 FontSize = 20,
 
@@ -457,6 +408,19 @@ public class RoutingCandidateView : ContentView
         CandidateSelected?.Invoke(
             this,
             card.Candidate);
+    }
+
+    private void CandidateCard_MemberSelected(
+        object? sender,
+        RoutingDebugInfo member)
+    {
+        // Reuses the SAME event as a normal card tap. MapPage's handler
+        // looks up the matching Journey by JourneyId regardless of
+        // whether it came from a top-level card or an expanded group
+        // member, so no changes were needed on that side.
+        CandidateSelected?.Invoke(
+            this,
+            member);
     }
 
     private void ShowMessage(

@@ -4,7 +4,6 @@
     x:Class="LugarLang.Mobile.Pages.DiscoverPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:developer="clr-namespace:LugarLang.Internal.Controls.Developer;assembly=LugarLang.Internal"
     Title="Discover">
 
     <Grid>
@@ -65,9 +64,6 @@
 
         </ScrollView>
 
-        <developer:DeveloperLauncher
-            x:Name="DeveloperLauncherControl"
-            Margin="0,0,16,16" />
 
     </Grid>
 

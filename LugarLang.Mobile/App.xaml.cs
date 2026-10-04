@@ -1,19 +1,26 @@
-﻿using LugarLang.Mobile.Pages;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace LugarLang.Mobile
+namespace LugarLang.Mobile;
+
+public partial class App
+    : Microsoft.Maui.Controls.Application
 {
-    public partial class App : Microsoft.Maui.Controls.Application
+    public App()
     {
-        public App()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
 
-        protected override Window CreateWindow(
-            IActivationState? activationState)
-        {
-            return new Window(
-                new StartupPage());
-        }
+    protected override Window CreateWindow(
+        IActivationState? activationState)
+    {
+        AppShell shell =
+            Handler?
+                .MauiContext?
+                .Services
+                .GetRequiredService<AppShell>()
+            ?? throw new InvalidOperationException(
+                "AppShell could not be resolved.");
+
+        return new Window(shell);
     }
 }

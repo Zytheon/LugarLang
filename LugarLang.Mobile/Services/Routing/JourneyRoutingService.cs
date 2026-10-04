@@ -3,7 +3,7 @@ using LugarLang.Mobile.Services.Mapping;
 
 namespace LugarLang.Mobile.Services.Routing;
 
-public class JourneyRoutingService
+public class JourneyRoutingService : IJourneyRoutingService
 {
     private readonly TripRoutingService tripRoutingService;
     private readonly RouteTransferService routeTransferService;
@@ -18,6 +18,15 @@ public class JourneyRoutingService
         double MaxLatitude,
         double MinLongitude,
         double MaxLongitude);
+
+    // Diagnostic counters, reset at the start of every FindJourneys call.
+    // Not thread-safe -- fine for a single-user debug session, not fine
+    // if this service is ever called concurrently.
+    private int diagnosticPairsAttempted;
+    private int diagnosticPairsRejectedSameRoute;
+    private int diagnosticPairsRejectedBoundingBox;
+    private int diagnosticPairsRejectedNoTransferPoints;
+    private int diagnosticJourneysProduced;
 
     public JourneyRoutingService(
         TripRoutingService tripRoutingService,
@@ -48,12 +57,39 @@ public class JourneyRoutingService
         List<Journey> journeys =
             new();
 
+        diagnosticPairsAttempted = 0;
+        diagnosticPairsRejectedSameRoute = 0;
+        diagnosticPairsRejectedBoundingBox = 0;
+        diagnosticPairsRejectedNoTransferPoints = 0;
+        diagnosticJourneysProduced = 0;
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[OLD ALGORITHM] FindJourneys starting: " +
+            $"{routeList.Count} routes in network, " +
+            $"maxWalk={maximumWalkingDistanceMeters}m");
+
+        System.Diagnostics.Stopwatch totalTimer =
+            System.Diagnostics.Stopwatch.StartNew();
+
+        System.Diagnostics.Stopwatch directTimer =
+            System.Diagnostics.Stopwatch.StartNew();
+
         AddDirectJourneys(
             journeys,
             routeList,
             from,
             to,
             maximumWalkingDistanceMeters);
+
+        directTimer.Stop();
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[OLD ALGORITHM] AddDirectJourneys: " +
+            $"{directTimer.ElapsedMilliseconds}ms, " +
+            $"{journeys.Count} direct journeys so far");
+
+        System.Diagnostics.Stopwatch twoRideTimer =
+            System.Diagnostics.Stopwatch.StartNew();
 
         AddTwoRideJourneys(
             journeys,
@@ -62,8 +98,45 @@ public class JourneyRoutingService
             to,
             maximumWalkingDistanceMeters);
 
-        return RemoveDuplicateJourneys(
-            journeys);
+        twoRideTimer.Stop();
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[OLD ALGORITHM] AddTwoRideJourneys: " +
+            $"{twoRideTimer.ElapsedMilliseconds}ms -- " +
+            $"pairs attempted={diagnosticPairsAttempted}, " +
+            $"rejected(same route)={diagnosticPairsRejectedSameRoute}, " +
+            $"rejected(bounding box)={diagnosticPairsRejectedBoundingBox}, " +
+            $"rejected(no transfer points)={diagnosticPairsRejectedNoTransferPoints}, " +
+            $"journeys produced={diagnosticJourneysProduced}");
+
+        List<Journey> deduped =
+            RemoveDuplicateJourneys(
+                journeys);
+
+        totalTimer.Stop();
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[OLD ALGORITHM] TOTAL: {totalTimer.ElapsedMilliseconds}ms, " +
+            $"{journeys.Count} journeys before dedup, " +
+            $"{deduped.Count} after dedup");
+
+        foreach (Journey journey in deduped)
+        {
+            string legSummary =
+                string.Join(
+                    " -> ",
+                    journey.Legs.Select(
+                        leg =>
+                            $"{leg.RouteId}/{leg.DirectionName}" +
+                            $"(ride={leg.RideDistanceMeters:F0}m)"));
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[OLD ALGORITHM]   JOURNEY: [{legSummary}] " +
+                $"totalWalk={journey.TotalWalkingDistanceMeters:F0}m " +
+                $"totalRide={journey.TotalRideDistanceMeters:F0}m");
+        }
+
+        return deduped;
     }
 
     public Journey? SelectBestJourney(
@@ -111,10 +184,26 @@ public class JourneyRoutingService
                 to,
                 maximumWalkingDistanceMeters);
 
+        System.Diagnostics.Debug.WriteLine(
+            $"[OLD ALGORITHM]   AddDirectJourneys: " +
+            $"{candidates.Count} route-directions evaluated");
+
         foreach (
             DirectionEvaluation candidate
             in candidates)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"[OLD ALGORITHM]     {candidate.Route.Id}/" +
+                $"{candidate.DirectionName}: " +
+                $"fromWalk={candidate.FromWalkingDistance:F0}m " +
+                $"toWalk={candidate.ToWalkingDistance:F0}m " +
+                $"viable={candidate.Viable}" +
+                (candidate.Viable
+                    ? ""
+                    : $" (fromIndex={candidate.FromIndex}, toIndex={candidate.ToIndex} -- " +
+                      "not viable means either walk exceeded max, or toIndex " +
+                      "didn't come after fromIndex on this direction)"));
+
             if (!candidate.Viable)
             {
                 continue;
@@ -188,6 +277,35 @@ public class JourneyRoutingService
             }
         }
 
+        System.Diagnostics.Debug.WriteLine(
+            $"[OLD ALGORITHM]   AddTwoRideJourneys: " +
+            $"{originDirections.Count} origin directions, " +
+            $"{destinationDirections.Count} destination directions");
+
+        System.Diagnostics.Debug.WriteLine(
+            "[OLD ALGORITHM]   ORIGIN DIRECTIONS (near From):");
+
+        foreach (var (route, direction, access) in originDirections
+            .OrderBy(o => o.AccessResult.DistanceMeters))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[OLD ALGORITHM]     {route.Id} ({route.Name}) " +
+                $"{GetDirectionName(route, direction)} - " +
+                $"{access.DistanceMeters:F0}m");
+        }
+
+        System.Diagnostics.Debug.WriteLine(
+            "[OLD ALGORITHM]   DESTINATION DIRECTIONS (near To):");
+
+        foreach (var (route, direction, access) in destinationDirections
+            .OrderBy(d => d.AccessResult.DistanceMeters))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[OLD ALGORITHM]     {route.Id} ({route.Name}) " +
+                $"{GetDirectionName(route, direction)} - " +
+                $"{access.DistanceMeters:F0}m");
+        }
+
         foreach (
             (Route firstRoute, Direction firstDirection, RouteAccessResult fromAccessResult)
             in originDirections)
@@ -200,8 +318,11 @@ public class JourneyRoutingService
                     firstRoute == secondRoute &&
                     firstDirection == secondDirection)
                 {
+                    diagnosticPairsRejectedSameRoute++;
                     continue;
                 }
+
+                diagnosticPairsAttempted++;
 
                 AddTwoRideJourneyCandidates(
                     journeys,
@@ -267,6 +388,7 @@ public class JourneyRoutingService
                 secondDirection,
                 maximumWalkingDistanceMeters))
         {
+            diagnosticPairsRejectedBoundingBox++;
             return;
         }
 
@@ -278,6 +400,7 @@ public class JourneyRoutingService
 
         if (transfers.Count == 0)
         {
+            diagnosticPairsRejectedNoTransferPoints++;
             return;
         }
 
@@ -365,6 +488,8 @@ public class JourneyRoutingService
 
             journeys.Add(
                 journey);
+
+            diagnosticJourneysProduced++;
         }
     }
 
