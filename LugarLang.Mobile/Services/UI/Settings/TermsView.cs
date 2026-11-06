@@ -6,7 +6,7 @@ public class TermsView : ContentView
 {
     // PLACEHOLDER: replace with your real terms.
     private const string TermsText =
-        "Last updated: [date]\n\n" +
+        "Last updated: [November 11, 2026]\n\n" +
         "1. About LugarLang\n" +
         "LugarLang is a guide to places and local transport. " +
         "Information is provided for general reference only.\n\n" +

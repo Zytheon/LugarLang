@@ -24,10 +24,12 @@ public class OnboardingPage : ContentPage
                 "Welcome to LugarLang",
                 "Discover places worth visiting and find your way " +
                 "around by jeepney and on foot.",
-                new Label
+                new Image
                 {
-                    Text = "📍",
-                    FontSize = 84,
+                    Source = ImageSource.FromFile("lugarlang_logo.png"),
+                    Aspect = Aspect.AspectFit,
+                    WidthRequest = 220,
+                    HeightRequest = 220,
                     HorizontalOptions = LayoutOptions.Center,
                     VerticalOptions = LayoutOptions.Center
                 }),
