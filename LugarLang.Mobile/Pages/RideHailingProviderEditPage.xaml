@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.RideHailingProviderEditPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Provider Editor"
+    BackgroundColor="#F1F6FA">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label
+                x:Name="PageHeading"
+                Text="Add Provider"
+                FontSize="26"
+                FontAttributes="Bold"
+                TextColor="#253B50" />
+
+            <!-- BASIC INFORMATION -->
+
+            <Label
+                Text="Provider information"
+                FontSize="19"
+                FontAttributes="Bold"
+                TextColor="#253B50" />
+
+            <Label Text="Provider name"
+                   FontAttributes="Bold"
+                   TextColor="#34566F" />
+
+            <Entry
+                x:Name="NameEntry"
+                Placeholder="Enter provider name"
+                BackgroundColor="White" />
+
+            <Label Text="Service type"
+                   FontAttributes="Bold"
+                   TextColor="#34566F" />
+
+            <Entry
+                x:Name="ServiceTypeEntry"
+                Placeholder="e.g. Motorcycle taxi, Car ride"
+                BackgroundColor="White" />
+
+            <Label Text="Description"
+                   FontAttributes="Bold"
+                   TextColor="#34566F" />
+
+            <Editor
+                x:Name="DescriptionEditor"
+                Placeholder="Describe this provider's service"
+                AutoSize="TextChanges"
+                MinimumHeightRequest="110"
+                BackgroundColor="White" />
+
+            <Label Text="Service coverage"
+                   FontAttributes="Bold"
+                   TextColor="#34566F" />
+
+            <Editor
+                x:Name="CoverageEditor"
+                Placeholder="Describe the provider's service coverage"
+                AutoSize="TextChanges"
+                MinimumHeightRequest="90"
+                BackgroundColor="White" />
+
+            <Label Text="Placeholder symbol"
+                   FontAttributes="Bold"
+                   TextColor="#34566F" />
+
+            <Entry
+                x:Name="SymbolEntry"
+                Placeholder="e.g. 🚗"
+                BackgroundColor="White" />
+
+            <Label Text="Placeholder color"
+                   FontAttributes="Bold"
+                   TextColor="#34566F" />
+
+            <Entry
+                x:Name="ColorEntry"
+                Placeholder="#486F91"
+                BackgroundColor="White" />
+
+            <Label
+                Text="Use a hexadecimal color such as #486F91."
+                FontSize="12"
+                TextColor="#627B92" />
+
+            <BoxView HeightRequest="1"
+                     Color="#D6E2ED"
+                     Margin="0,8" />
+
+            <!-- SERVICE AREA -->
+
+            <Label
+                Text="Service area"
+                FontSize="19"
+                FontAttributes="Bold"
+                TextColor="#253B50" />
+
+            <Label
+                Text="Region"
+                FontAttributes="Bold"
+                TextColor="#34566F" />
+
+            <Picker
+                x:Name="RegionPicker"
+                Title="Select region"
+                BackgroundColor="White"
+                SelectedIndexChanged="OnRegionChanged" />
+
+            <Label
+                Text="Province"
+                FontAttributes="Bold"
+                TextColor="#34566F" />
+
+            <Picker
+                x:Name="ProvincePicker"
+                Title="Select province"
+                BackgroundColor="White"
+                SelectedIndexChanged="OnProvinceChanged" />
+
+            <Label
+                Text="City / Municipality"
+                FontAttributes="Bold"
+                TextColor="#34566F" />
+
+            <Picker
+                x:Name="CityPicker"
+                Title="Select city or municipality"
+                BackgroundColor="White"
+                SelectedIndexChanged="OnCityChanged" />
+
+            <Label
+                Text="Location options are shared with the Places editor. Select '+ Add new…' to add an option."
+                FontSize="12"
+                TextColor="#627B92" />
+
+            <BoxView HeightRequest="1"
+                     Color="#D6E2ED"
+                     Margin="0,8" />
+
+            <!-- MAP LOCATION -->
+
+            <Label
+                Text="Map location"
+                FontSize="19"
+                FontAttributes="Bold"
+                TextColor="#253B50" />
+
+            <Label
+                Text="Choose a location on the map to place a pin for this provider."
+                FontSize="13"
+                TextColor="#627B92" />
+
+            <Label
+                x:Name="LocationStatusLabel"
+                Text="No map location selected."
+                FontSize="13"
+                TextColor="#34566F" />
+
+            <Button
+                x:Name="MapToggleButton"
+                Text="Pick Location on Map"
+                HeightRequest="48"
+                CornerRadius="12"
+                BackgroundColor="#E5EEF6"
+                TextColor="#34566F"
+                Clicked="OnPickOnMapClicked" />
+
+            <ContentView
+                x:Name="MapPinPlaceholder"
+                HeightRequest="300"
+                IsVisible="False"
+                BackgroundColor="White" />
+
+            <BoxView HeightRequest="1"
+                     Color="#D6E2ED"
+                     Margin="0,8" />
+
+            <!-- PROVIDER PHOTOS -->
+
+            <Label
+                Text="Provider photos"
+                FontSize="19"
+                FontAttributes="Bold"
+                TextColor="#253B50" />
+
+            <Label
+                Text="Add multiple photos to show this provider's vehicles, services, or branding."
+                FontSize="13"
+                TextColor="#627B92" />
+
+            <Button
+                Text="+ Add Photo"
+                HeightRequest="46"
+                CornerRadius="12"
+                BackgroundColor="#E5EEF6"
+                TextColor="#34566F"
+                Clicked="OnAddPhotoClicked" />
+
+            <Label
+                x:Name="PhotoCountLabel"
+                Text="0 photos"
+                FontSize="12"
+                TextColor="#627B92" />
+
+            <VerticalStackLayout
+                x:Name="PhotosContainer"
+                Spacing="10" />
+
+            <BoxView HeightRequest="1"
+                     Color="#D6E2ED"
+                     Margin="0,8" />
+
+            <!-- ACTIONS -->
+
+            <Button
+                Text="Save Provider"
+                HeightRequest="50"
+                CornerRadius="14"
+                BackgroundColor="#486F91"
+                TextColor="White"
+                Clicked="OnSaveClicked" />
+
+            <Button
+                Text="Cancel"
+                HeightRequest="48"
+                CornerRadius="14"
+                BackgroundColor="#E5EEF6"
+                TextColor="#34566F"
+                Clicked="OnCancelClicked" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

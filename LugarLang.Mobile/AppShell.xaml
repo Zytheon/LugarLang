@@ -13,12 +13,6 @@
             Title="Discover"
             ContentTemplate="{DataTemplate pages:DiscoverPage}"
             Route="DiscoverPage" />
-
-        <ShellContent
-            Title="Map"
-            ContentTemplate="{DataTemplate pages:MapPage}"
-            Route="MapPage" />
-
     </TabBar>
 
 </Shell>

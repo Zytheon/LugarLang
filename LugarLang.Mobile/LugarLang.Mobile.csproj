@@ -53,7 +53,15 @@
 	</PropertyGroup>
 
 	<!-- RELEASE configuration -->
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+	<PropertyGroup Condition="'$(Configuration)'=='Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+		<RunAOTCompilation>false</RunAOTCompilation>
+		<AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+	</PropertyGroup>
+
+	<!-- Android Release: 64-bit ARM only (smaller APK, no 32-bit or x86 code) -->
+	<PropertyGroup Condition="'$(Configuration)'=='Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
 	</PropertyGroup>
 
 	<!-- MAUI Resources -->
@@ -111,11 +119,19 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
-		<MauiXaml Update="Pages\MapPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
+		<MauiXaml Update="Pages\RideHailingManagementPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
-		<MauiXaml Update="Pages\StartupPage.xaml">
+		<MauiXaml Update="Pages\RideHailingProviderDetailsPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+
+		<MauiXaml Update="Pages\RideHailingProviderEditPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+
+		<MauiXaml Update="Services\UI\Map\MapPanelView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
@@ -129,6 +145,17 @@
 		<Folder Include="Controls\" />
 		<Folder Include="Models\Routing\" />
 		<Folder Include="Services\Discovery\" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Update="Pages\RideHailingManagementPage.xaml.cs">
+		  <DependentUpon>RideHailingManagementPage.xaml</DependentUpon>
+		</Compile>
+		<Compile Update="Pages\RideHailingProviderDetailsPage.xaml.cs">
+		  <DependentUpon>RideHailingProviderDetailsPage.xaml</DependentUpon>
+		</Compile>
+		<Compile Update="Services\UI\Map\MapPanelView.xaml.cs">
+			<DependentUpon>MapPanelView.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 	<!-- XAML code-behind relationship -->

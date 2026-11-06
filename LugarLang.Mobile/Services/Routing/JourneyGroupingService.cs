@@ -93,8 +93,8 @@ public class JourneyGroupingService
             {
                 match.Members.Add(journey);
 
-                if (journey.TotalTravelDistanceMeters <
-                    match.Representative.TotalTravelDistanceMeters)
+                if (SegmentGraphJourneyRoutingService.EstimateTotalMinutes(journey) <
+                    SegmentGraphJourneyRoutingService.EstimateTotalMinutes(match.Representative))
                 {
                     match.Representative = journey;
                 }

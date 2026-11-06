@@ -4,22 +4,16 @@ using LugarLang.Mobile.Services.RoutingSpatial;
 namespace LugarLang.Mobile.Services.Routing;
 
 /// <summary>
-/// Alternate FindJourneys implementation, built to be a drop-in swap for
-/// JourneyRoutingService (same method signature, same Journey/JourneyLeg/
-/// DirectionEvaluation output shape) so MapPage.xaml.cs can switch between
-/// the two with a one-line change for comparison.
+/// FindJourneys implementation that runs Dijkstra's algorithm over a graph
+/// that was fully precomputed offline and ships bundled in the APK as
+/// routegraph.json. No graph-building work happens on-device or at query
+/// time -- only nearest-node snapping and the search itself.
 ///
-/// Unlike JourneyRoutingService (which does live nearest-point search and
-/// live transfer-point sampling on every query, capped at exactly one
-/// transfer), this runs Dijkstra's algorithm over a graph that was fully
-/// precomputed offline (see build_graph.py) and ships bundled in the APK
-/// as routegraph.json. No graph-building work happens on-device or at
-/// query time -- only nearest-node snapping (which any point-to-point
-/// query needs regardless of approach) and the search itself.
-///
-/// Journeys are not capped at one transfer: the graph search finds
-/// whatever number of legs is actually shortest, including direct
-/// (zero-transfer) journeys and multi-transfer ones.
+/// The search cost is an estimate of travel TIME in seconds (walking and
+/// riding at different speeds, plus a penalty per transfer), not raw
+/// meters. After the search, impractical journeys are filtered out: too
+/// many rides, tiny rides inside a multi-ride trip, and multi-ride trips
+/// that do not clearly beat a simpler option.
 /// </summary>
 public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
 {
@@ -28,23 +22,48 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
     /// <summary>
     /// How many (start route, end route) pairs get their own Dijkstra
     /// search, taken in order of combined walking distance (closest
-    /// pairs first). Was previously applied per-start-candidate via a
-    /// nested-loop break, which meant only the FIRST start candidate
-    /// ever actually got searched -- fixed by flattening to a single
-    /// sorted list before taking the top N.
+    /// pairs first). Same-route pairs are always searched on top of this.
     /// </summary>
     private const int MaximumCandidatePairsSearched = 20;
 
     /// <summary>
-    /// Flat cost added on top of a transfer edge's real walking distance.
-    /// Without this, Dijkstra has no reason to prefer "ride one route a
-    /// long way" over "hop through several nearby routes a few meters
-    /// each" when they sum to a similar distance -- which produced
-    /// journeys with several near-zero-distance legs in dense areas.
-    /// Not applied to the initial/final access walk (only to edges
-    /// between two different routes).
+    /// Assumed walking speed, about 5 km/h. Used to turn walking meters
+    /// into seconds, both in the search cost and in time estimates.
     /// </summary>
-    private const double TransferPenaltyMeters = 400.0;
+    private const double WalkSpeedMetersPerSecond = 1.4;
+
+    /// <summary>
+    /// Assumed average speed while riding, about 15 km/h including stops
+    /// and traffic. A guess -- tune it against real trips.
+    /// </summary>
+    private const double RideSpeedMetersPerSecond = 4.2;
+
+    /// <summary>
+    /// Flat time cost added to every transfer edge, standing in for the
+    /// wait for the next vehicle, flagging it down, and the extra fare
+    /// and hassle. Only applied to edges between two different routes,
+    /// never to the first or last walk.
+    /// </summary>
+    private const double TransferPenaltySeconds = 480.0;
+
+    /// <summary>
+    /// Journeys with more rides than this are discarded.
+    /// </summary>
+    private const int MaximumRides = 3;
+
+    /// <summary>
+    /// In a journey with more than one ride, every ride must be at least
+    /// this long. Shorter rides are usually just hopping between routes
+    /// that run along the same street.
+    /// </summary>
+    private const double MinimumRideMetersInMultiRide = 300.0;
+
+    /// <summary>
+    /// A journey is kept only if it is at least this much faster
+    /// (walking time + riding time) than the best journey with fewer
+    /// rides. Prevents showing an extra transfer for a tiny saving.
+    /// </summary>
+    private const double MinimumSavingsSeconds = 600.0;
 
     public SegmentGraphJourneyRoutingService(RouteGraph graph)
     {
@@ -57,9 +76,10 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
         GeoPoint to,
         double maximumWalkingDistanceMeters)
     {
-        // 'routes' is accepted to match JourneyRoutingService's signature
-        // exactly, but isn't otherwise used here -- the graph was already
-        // resolved against the live route set when RouteGraph was built.
+        // 'routes' is accepted to match the IJourneyRoutingService
+        // signature, but isn't otherwise used here -- the graph was
+        // already resolved against the live route set when RouteGraph
+        // was built.
         _ = routes;
 
         System.Diagnostics.Debug.WriteLine(
@@ -214,7 +234,9 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
                 ReconstructJourney(
                     result.Value.Path,
                     startWalkingDistance,
-                    endWalkingDistance);
+                    endWalkingDistance,
+                    from,
+                    to);
 
             if (journey.Legs.Count == 0)
             {
@@ -223,6 +245,17 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
                     $"{startNode.DirectionName} -> {endNode.Route.Id}/" +
                     $"{endNode.DirectionName}: path found but " +
                     $"reconstructed to zero legs (unexpected)");
+                continue;
+            }
+
+            string? rejection = GetRejectionReason(journey);
+
+            if (rejection != null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[NEW ALGORITHM]     PAIR {startNode.Route.Id}/" +
+                    $"{startNode.DirectionName} -> {endNode.Route.Id}/" +
+                    $"{endNode.DirectionName}: REJECTED ({rejection})");
                 continue;
             }
 
@@ -245,7 +278,7 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
             System.Diagnostics.Debug.WriteLine(
                 $"[NEW ALGORITHM]     PAIR {startNode.Route.Id}/" +
                 $"{startNode.DirectionName} -> {endNode.Route.Id}/" +
-                $"{endNode.DirectionName}: cost={result.Value.TotalCost:F0}m " +
+                $"{endNode.DirectionName}: cost={result.Value.TotalCost:F0}s " +
                 $"legs=[{legSummary}]" +
                 (isDuplicate ? " -- SKIPPED (duplicate leg sequence)" : "") +
                 $" ({pairTimer.ElapsedMilliseconds}ms)");
@@ -258,6 +291,8 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
             journeys.Add(journey);
         }
 
+        journeys = ApplyDominanceFilter(journeys);
+
         queryTimer.Stop();
 
         System.Diagnostics.Debug.WriteLine(
@@ -268,9 +303,96 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
     }
 
     /// <summary>
-    /// Picks the single best journey, mirroring JourneyRoutingService's
-    /// SelectBestJourney ranking: fewest walking distance, then fewest
-    /// transfers, then shortest ride distance.
+    /// Estimated travel time in seconds: walking time plus riding time.
+    /// Deliberately excludes the transfer penalty -- the minimum-savings
+    /// rule compares real movement time, and the margin it requires
+    /// already stands in for the cost of an extra transfer.
+    /// </summary>
+    private static double EstimateTravelSeconds(Journey journey)
+    {
+        return
+            journey.TotalWalkingDistanceMeters / WalkSpeedMetersPerSecond +
+            journey.TotalRideDistanceMeters / RideSpeedMetersPerSecond;
+    }
+
+    public static double EstimateTotalMinutes(Journey journey)
+    {
+        double seconds =
+            EstimateTravelSeconds(journey) +
+            journey.NumberOfTransfers * TransferPenaltySeconds;
+
+        return seconds / 60.0;
+    }
+
+    /// <summary>
+    /// Returns why a journey is impractical, or null if it is acceptable.
+    /// </summary>
+    private string? GetRejectionReason(Journey journey)
+    {
+        if (journey.Legs.Count > MaximumRides)
+        {
+            return $"{journey.Legs.Count} rides, max {MaximumRides}";
+        }
+
+        if (journey.Legs.Count > 1 &&
+            journey.Legs.Any(
+                leg => leg.RideDistanceMeters < MinimumRideMetersInMultiRide))
+        {
+            return $"a ride under {MinimumRideMetersInMultiRide:F0} m";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Keeps a journey only if no simpler option (fewer rides) is within
+    /// MinimumSavingsSeconds of it. Journeys with the fewest rides found
+    /// are always kept.
+    /// </summary>
+    private List<Journey> ApplyDominanceFilter(List<Journey> journeys)
+    {
+        List<Journey> kept = new();
+
+        foreach (Journey journey in journeys)
+        {
+            List<Journey> simpler =
+                journeys
+                    .Where(other => other.Legs.Count < journey.Legs.Count)
+                    .ToList();
+
+            if (simpler.Count == 0)
+            {
+                kept.Add(journey);
+                continue;
+            }
+
+            double bestSimplerSeconds =
+                simpler.Min(other => EstimateTravelSeconds(other));
+
+            if (EstimateTravelSeconds(journey) <=
+                bestSimplerSeconds - MinimumSavingsSeconds)
+            {
+                kept.Add(journey);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[NEW ALGORITHM]   DROPPED ({journey.Legs.Count} rides, " +
+                    $"not {MinimumSavingsSeconds / 60:F0}+ min faster than " +
+                    $"the best simpler option): " +
+                    string.Join(
+                        "|",
+                        journey.Legs.Select(
+                            leg => $"{leg.RouteId}:{leg.DirectionName}")));
+            }
+        }
+
+        return kept;
+    }
+
+    /// <summary>
+    /// Picks the single best journey: least walking distance, then
+    /// fewest transfers, then shortest ride distance.
     /// </summary>
     public Journey? SelectBestJourney(List<Journey> journeys)
     {
@@ -282,7 +404,7 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
     }
 
     /// <summary>
-    /// Top N journeys by total commute time (walk + ride distance, since
+    /// Top N journeys by total commute (walk + ride distance, since
     /// wait time is deliberately out of scope for this MVP).
     /// </summary>
     public List<Journey> TopByTotalCommute(List<Journey> journeys, int count)
@@ -389,6 +511,11 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
         return (path, distances[virtualDestination]);
     }
 
+    /// <summary>
+    /// Edge weights are in SECONDS: walking edges (the first walk, the
+    /// last walk, and transfers) use walking speed, ride edges use
+    /// riding speed, and transfers also pay TransferPenaltySeconds.
+    /// </summary>
     private IEnumerable<(int To, double Weight)> GetNeighbors(
         int nodeId,
         int startNodeId,
@@ -401,7 +528,10 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
     {
         if (nodeId == virtualOrigin)
         {
-            yield return (startNodeId, startWalkingDistance);
+            yield return (
+                startNodeId,
+                startWalkingDistance / WalkSpeedMetersPerSecond);
+
             yield break;
         }
 
@@ -418,26 +548,29 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
                 continue;
             }
 
-            double weight = edge.DistanceMeters;
-
-            if (edge.IsTransfer)
-            {
-                weight += TransferPenaltyMeters;
-            }
+            double weight =
+                edge.IsTransfer
+                    ? edge.DistanceMeters / WalkSpeedMetersPerSecond +
+                      TransferPenaltySeconds
+                    : edge.DistanceMeters / RideSpeedMetersPerSecond;
 
             yield return (edge.ToNode, weight);
         }
 
         if (nodeId == endNodeId)
         {
-            yield return (virtualDestination, endWalkingDistance);
+            yield return (
+                virtualDestination,
+                endWalkingDistance / WalkSpeedMetersPerSecond);
         }
     }
 
     private Journey ReconstructJourney(
         List<int> fullPath,
         double startWalkingDistance,
-        double endWalkingDistance)
+        double endWalkingDistance,
+        GeoPoint originPoint,
+        GeoPoint destinationPoint)
     {
         int virtualOrigin = graph.NodeCount;
         int virtualDestination = graph.NodeCount + 1;
@@ -483,13 +616,25 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
                             realNodes[legStart - 1],
                             realNodes[legStart]);
 
+                GeoPoint walkFromPoint =
+                    isFirstLeg
+                        ? originPoint
+                        : graph.GetNode(realNodes[legStart]).Point;
+
+                GeoPoint walkToPoint =
+                    isLastLeg
+                        ? destinationPoint
+                        : graph.GetNode(realNodes[i]).Point;
+
                 journey.Legs.Add(
                     BuildLeg(
                         realNodes,
                         legStart,
                         legEndIndex,
                         walkingDistanceIntoLeg,
-                        isLastLeg ? endWalkingDistance : 0));
+                        isLastLeg ? endWalkingDistance : 0,
+                        walkFromPoint,
+                        walkToPoint));
 
                 legStart = i;
             }
@@ -503,7 +648,9 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
         int legStart,
         int legEndIndex,
         double fromWalkingDistance,
-        double toWalkingDistance)
+        double toWalkingDistance,
+        GeoPoint walkFromPoint,
+        GeoPoint walkToPoint)
     {
         RouteGraphResolvedNode firstNode = graph.GetNode(realNodes[legStart]);
         RouteGraphResolvedNode lastNode = graph.GetNode(realNodes[legEndIndex]);
@@ -520,8 +667,8 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
             Route = firstNode.Route,
             DirectionName = firstNode.DirectionName,
             Direction = firstNode.Direction,
-            From = firstNode.Point,
-            To = lastNode.Point,
+            From = walkFromPoint,
+            To = walkToPoint,
             NearestFrom = firstNode.Point,
             NearestTo = lastNode.Point,
             FromIndex = firstNode.PathIndex,
@@ -537,11 +684,10 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
     }
 
     /// <summary>
-    /// Weight of an edge as used by the SEARCH (includes the transfer
-    /// penalty for transfer edges). Used when reconstructing the walking
-    /// distance that led INTO a leg -- we want the real walking distance
-    /// here, not the penalized search weight, so this strips the penalty
-    /// back out for transfer edges.
+    /// Real distance in meters of the edge between two nodes (not the
+    /// search weight, which is in seconds and includes the transfer
+    /// penalty). Used when reconstructing the walking distance that led
+    /// INTO a leg, and for ride distances.
     /// </summary>
     private double GetEdgeWeight(int fromNode, int toNode)
     {
@@ -559,10 +705,9 @@ public class SegmentGraphJourneyRoutingService : IJourneyRoutingService
     }
 
     /// <summary>
-    /// Weight of a RIDE edge specifically (never penalized -- the
-    /// transfer penalty only ever applies to transfer edges, so this is
-    /// really the same lookup as GetEdgeWeight, named separately so the
-    /// two call sites read clearly for what they mean).
+    /// Distance in meters of a RIDE edge specifically. Same lookup as
+    /// GetEdgeWeight, named separately so the two call sites read
+    /// clearly for what they mean.
     /// </summary>
     private double GetRideEdgeWeight(int fromNode, int toNode)
     {

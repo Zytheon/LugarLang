@@ -1,7 +1,8 @@
 ﻿using CommunityToolkit.Maui;
+using LugarLang.Internal.Services;
 using LugarLang.Internal.Services.Content;
 using LugarLang.Internal.Services.Developer;
-using LugarLang.Internal.Services;
+using LugarLang.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using Shiny;
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -12,6 +13,8 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        Mapsui.UI.Maui.MapControl.UseGPU = false;
+
         var builder =
             MauiApp.CreateBuilder();
 
@@ -47,7 +50,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<
             DeveloperLayoutPersistenceService>();
 
-        builder.Services.AddSingleton<
+        builder.Services.AddSingleton<  
             DeveloperApiPersistenceService>();
 #endif
 
@@ -55,9 +58,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<
             CategoryContentService>();
 
-        builder.Services.AddSingleton<
+        builder.Services.AddSingleton<  
             PlaceContentService>();
 
+        builder.Services.AddSingleton<
+            PhotoCacheService>();
+        builder.Services.AddSingleton<
+            RideHailingProviderContentService>();
         // AppShell
         builder.Services.AddSingleton<
             AppShell>();

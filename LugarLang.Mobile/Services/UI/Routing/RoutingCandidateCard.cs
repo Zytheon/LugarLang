@@ -55,163 +55,160 @@ public class RoutingCandidateCard : Border
 
     private View CreateContent()
     {
-        VerticalStackLayout layout =
-            new()
-            {
-                Spacing = 4
-            };
+        VerticalStackLayout layout = new() { Spacing = 6 };
+
+        int minutes = Math.Max(1, (int)Math.Round(Candidate.EstimatedMinutes));
+
+        string ridesText =
+            Candidate.NumberOfRides == 1
+                ? "Direct"
+                : $"{Candidate.NumberOfRides} rides";
 
         layout.Children.Add(
             new Label
             {
                 Text =
-                    Candidate.Legs.Count == 1
-                        ? Candidate.Legs[0].RouteName
-                        : "Journey",
-
+                    $"~{minutes} min · {ridesText} · " +
+                    $"{JourneyPresentation.FormatDistance(Candidate.TotalWalkingDistance)} walk · " +
+                    $"{JourneyPresentation.FormatKilometers(Candidate.RideDistanceMeters)} ride",
                 FontSize = 16,
-
-                FontAttributes =
-                    FontAttributes.Bold
+                FontAttributes = FontAttributes.Bold
             });
 
-        if (Candidate.Legs.Count > 0)
+        if (Candidate.Badges.Count > 0)
         {
-            for (
-                int i = 0;
-                i < Candidate.Legs.Count;
-                i++)
+            HorizontalStackLayout badgeRow = new() { Spacing = 6 };
+
+            foreach (string badge in Candidate.Badges)
             {
-                RoutingDebugLegInfo leg =
-                    Candidate.Legs[i];
-
-                layout.Children.Add(
-                    new Label
+                badgeRow.Children.Add(
+                    new Border
                     {
-                        Text =
-                            $"Ride {i + 1}: " +
-                            $"{leg.RouteName} " +
-                            $"({leg.DirectionName})",
-
-                        FontSize = 13
-                    });
-
-                layout.Children.Add(
-                    new Label
-                    {
-                        Text =
-                            $"  Walk before: " +
-                            $"{leg.FromWalkingDistance:F0} m",
-
-                        FontSize = 12
-                    });
-
-                layout.Children.Add(
-                    new Label
-                    {
-                        Text =
-                            $"  Ride: " +
-                            $"{leg.RideDistanceMeters:F0} m",
-
-                        FontSize = 12
-                    });
-
-                if (
-                    i ==
-                    Candidate.Legs.Count - 1)
-                {
-                    layout.Children.Add(
-                        new Label
+                        Padding = new Thickness(8, 2),
+                        StrokeThickness = 0,
+                        BackgroundColor = Color.FromArgb("#DCEAFE"),
+                        StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                        Content = new Label
                         {
-                            Text =
-                                $"  Walk after: " +
-                                $"{leg.ToWalkingDistance:F0} m",
+                            Text = badge,
+                            FontSize = 12,
+                            TextColor = Color.FromArgb("#174EA6")
+                        }
+                    });
+            }
 
-                            FontSize = 12
-                        });
-                }
-                else
+            layout.Children.Add(badgeRow);
+        }
+
+        if (!Candidate.Viable)
+        {
+            layout.Children.Add(
+                new Label
                 {
-                    layout.Children.Add(
-                        new Label
-                        {
-                            Text =
-                                $"  Transfer walk: " +
-                                $"{leg.ToWalkingDistance:F0} m",
+                    Text = "Total walking is more than your walking limit",
+                    FontSize = 12,
+                    TextColor = Color.FromArgb("#B45309")
+                });
+        }
 
-                            FontSize = 12
-                        });
-                }
+        for (int i = 0; i < Candidate.Legs.Count; i++)
+        {
+            RoutingDebugLegInfo leg = Candidate.Legs[i];
+
+            string walkText =
+                i == 0
+                    ? $"Walk {JourneyPresentation.FormatDistance(leg.FromWalkingDistance)} to the route"
+                    : leg.FromWalkingDistance < 30
+                        ? "Change vehicles right here"
+                        : $"Walk {JourneyPresentation.FormatDistance(leg.FromWalkingDistance)} to the next route";
+
+            layout.Children.Add(CreateStepLabel(walkText));
+
+            (int r, int g, int b) = JourneyPresentation.GetRideRgb(i);
+
+            Border numberBadge =
+                new()
+                {
+                    WidthRequest = 22,
+                    HeightRequest = 22,
+                    StrokeThickness = 0,
+                    BackgroundColor = Color.FromRgb(r, g, b),
+                    StrokeShape = new RoundRectangle { CornerRadius = 11 },
+                    Content = new Label
+                    {
+                        Text = (i + 1).ToString(),
+                        TextColor = Colors.White,
+                        FontSize = 12,
+                        FontAttributes = FontAttributes.Bold,
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center
+                    }
+                };
+
+            Label rideLabel =
+                new()
+                {
+                    Text =
+                        $"{leg.RouteName} {leg.DirectionLabel} · " +
+                        $"{JourneyPresentation.FormatKilometers(leg.RideDistanceMeters)}",
+                    FontSize = 14,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+            Grid rideRow =
+                new()
+                {
+                    ColumnSpacing = 8,
+                    ColumnDefinitions =
+                    {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                    }
+                };
+
+            Grid.SetColumn(rideLabel, 1);
+            rideRow.Children.Add(numberBadge);
+            rideRow.Children.Add(rideLabel);
+
+            layout.Children.Add(rideRow);
+
+            if (i == Candidate.Legs.Count - 1)
+            {
+                layout.Children.Add(
+                    CreateStepLabel(
+                        $"Walk {JourneyPresentation.FormatDistance(leg.ToWalkingDistance)} to your destination"));
             }
         }
 
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Total walk: " +
-                    $"{Candidate.TotalWalkingDistance:F0} m",
-
-                FontSize = 13
-            });
-
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Total ride: " +
-                    $"{Candidate.RideDistanceMeters:F0} m",
-
-                FontSize = 13
-            });
-
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Rides: " +
-                    $"{Candidate.NumberOfRides}",
-
-                FontSize = 12
-            });
-
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Transfers: " +
-                    $"{Candidate.NumberOfTransfers}",
-
-                FontSize = 12
-            });
-
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Walk preference rank: " +
-                    $"#{Candidate.WalkPreferenceRank}",
-
-                FontSize = 12
-            });
-
-        layout.Children.Add(
-            new Label
-            {
-                Text =
-                    $"Ride preference rank: " +
-                    $"#{Candidate.RidePreferenceRank}",
-
-                FontSize = 12
-            });
+#if DEBUG
+    layout.Children.Add(
+        new Label
+        {
+            Text =
+                $"[debug] walk rank #{Candidate.WalkPreferenceRank}, " +
+                $"ride rank #{Candidate.RidePreferenceRank}, " +
+                $"transfers {Candidate.NumberOfTransfers}",
+            FontSize = 10,
+            TextColor = Colors.Gray
+        });
+#endif
 
         if (Candidate.GroupMembers.Count > 0)
         {
-            layout.Children.Add(
-                CreateGroupExpansion());
+            layout.Children.Add(CreateGroupExpansion());
         }
 
         return layout;
+    }
+
+    private static Label CreateStepLabel(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            FontSize = 12,
+            TextColor = Color.FromArgb("#5F6368")
+        };
     }
 
     /// <summary>
@@ -248,13 +245,15 @@ public class RoutingCandidateCard : Border
                 {
                     Text =
                         $"• {member.RouteSummary} — " +
-                        $"walk {member.TotalWalkingDistance:F0}m, " +
-                        $"ride {member.RideDistanceMeters:F0}m",
+                        $"~{Math.Max(1, (int)Math.Round(member.EstimatedMinutes))} min, " +
+                        $"walk {member.TotalWalkingDistance:F0} m, " +
+                        $"ride {JourneyPresentation.FormatKilometers(member.RideDistanceMeters)}",
 
                     FontSize = 12,
 
-                    TextColor =
-                        Colors.CornflowerBlue
+                    TextColor = Color.FromArgb("#174EA6"),
+                    MinimumHeightRequest = 48,
+                    VerticalTextAlignment = TextAlignment.Center
                 };
 
             TapGestureRecognizer memberTap =
@@ -281,7 +280,7 @@ public class RoutingCandidateCard : Border
                 Text =
                     $"Show {Candidate.GroupMembers.Count} " +
                     $"similar option(s)",
-
+                MinimumHeightRequest = 48,
                 FontSize = 12
             };
 

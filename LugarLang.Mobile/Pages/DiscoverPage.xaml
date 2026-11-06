@@ -1,70 +1,450 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
 <ContentPage
+    xmlns:settings="clr-namespace:LugarLang.Mobile.UI.Settings"
+    Shell.NavBarIsVisible="False"
     x:Class="LugarLang.Mobile.Pages.DiscoverPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Title="Discover">
+    xmlns:map="clr-namespace:LugarLang.Mobile.UI.Map"
+    Title="Discover"
+    BackgroundColor="#F1F6FA">
 
-    <Grid>
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Color x:Key="PageBackground">#F1F6FA</Color>
+            <Color x:Key="SurfaceWhite">#FFFFFF</Color>
+            <Color x:Key="PrimaryBlue">#486F91</Color>
+            <Color x:Key="DeepBlue">#34566F</Color>
+            <Color x:Key="SecondaryBlue">#E5EEF6</Color>
+            <Color x:Key="BorderBlue">#D6E2ED</Color>
+            <Color x:Key="TextPrimary">#253B50</Color>
+            <Color x:Key="TextSecondary">#627B92</Color>
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
-        <ScrollView>
+    <Grid
+        BackgroundColor="{StaticResource PageBackground}"
+        RowDefinitions="Auto,*">
 
-            <VerticalStackLayout
-                Padding="20"
-                Spacing="24">
+        <Grid
+    Grid.Row="0"
+    Padding="18,12,18,6"
+    ColumnDefinitions="Auto,*"
+    ColumnSpacing="12"
+    BackgroundColor="{StaticResource PageBackground}">
 
-                <Label
-                    Text="Discover"
-                    FontSize="32"
-                    FontAttributes="Bold" />
+            <Border
+        Grid.Column="0"
+        WidthRequest="44"
+        HeightRequest="44"
+        BackgroundColor="{StaticResource SecondaryBlue}"
+        Stroke="{StaticResource BorderBlue}"
+        StrokeThickness="1"
+        VerticalOptions="Center">
 
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="14" />
+                </Border.StrokeShape>
 
-
-                <!-- Featuring -->
-
-                <VerticalStackLayout
-                    Spacing="12">
-
+                <Grid>
                     <Label
-                        Text="Featuring"
-                        FontSize="22"
-                        FontAttributes="Bold" />
+                Text="☰"
+                FontSize="22"
+                TextColor="{StaticResource DeepBlue}"
+                HorizontalTextAlignment="Center"
+                VerticalTextAlignment="Center"
+                InputTransparent="True" />
 
                     <Button
-                        x:Name="FeaturedRegionButton"
-                        Text="Northern Mindanao"
-                        FontSize="18"
-                        HeightRequest="100"
-                        Clicked="OnFeaturedRegionClicked" />
+                Text=""
+                SemanticProperties.Description="Open menu"
+                BackgroundColor="Transparent"
+                BorderWidth="0"
+                Padding="0"
+                Clicked="OnMenuClicked" />
+                </Grid>
+            </Border>
 
+            <ScrollView
+        x:Name="BreadcrumbScroll"
+        Grid.Column="1"
+        VerticalOptions="Center"
+        Orientation="Horizontal"
+        HorizontalScrollBarVisibility="Never"
+        VerticalScrollBarVisibility="Never">
+
+                <HorizontalStackLayout
+            x:Name="BreadcrumbBar"
+            Spacing="8"
+            VerticalOptions="Center" />
+            </ScrollView>
+        </Grid>
+
+        <ScrollView
+            Grid.Row="1"
+            Padding="0,0,0,84"
+            VerticalOptions="Fill">
+
+            <VerticalStackLayout
+                Padding="18,12,18,24"
+                Spacing="22">
+
+                <!-- Page introduction -->
+                <VerticalStackLayout Spacing="6">
+                    <Label
+                        Text="Discover"
+                        FontSize="30"
+                        FontAttributes="Bold"
+                        TextColor="{StaticResource TextPrimary}" />
+
+                    <Label
+                        Text="Explore places and find somewhere new."
+                        FontSize="14"
+                        TextColor="{StaticResource TextSecondary}" />
                 </VerticalStackLayout>
 
-                <!-- Near Me -->
+                <!-- Featured region banner -->
+                <Border
+                    x:Name="FeaturedRegionBanner"
+                    Padding="0"
+                    Stroke="{StaticResource BorderBlue}"
+                    StrokeThickness="1"
+                    BackgroundColor="{StaticResource SurfaceWhite}"
+                    HeightRequest="360"
+                    MaximumWidthRequest="1000"
+                    HorizontalOptions="Fill"
+                    SizeChanged="OnFeaturedBannerSizeChanged">
 
-                <Button
-                    Text="📍  Near Me"
-                    FontSize="18"
-                    HeightRequest="60"
-                    Clicked="OnNearMeClicked" />
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
 
-                <Button
-                    Text="🔄 Refresh"
-                    FontSize="16"
-                    HeightRequest="50"
-                    IsVisible="True"
-                    Clicked="OnRefreshClicked" />
+                    <Grid>
+                        <BoxView
+                            BackgroundColor="{StaticResource SecondaryBlue}" />
 
+                        <Image
+                            x:Name="FeaturedRegionImage"
+                            Aspect="AspectFill"
+                            HorizontalOptions="Fill"
+                            VerticalOptions="Fill" />
 
-                <VerticalStackLayout
-                    x:Name="DiscoveryCategoriesLayout"
-                    Spacing="24" />
+                        <BoxView
+                            BackgroundColor="#B3203746"
+                            InputTransparent="True" />
 
+                        <Grid
+                            Padding="18"
+                            RowDefinitions="*,Auto"
+                            InputTransparent="True">
+
+                            <VerticalStackLayout
+                                Grid.Row="1"
+                                Spacing="5"
+                                VerticalOptions="End">
+
+                                <Label
+                                    Text="FEATURED REGION"
+                                    FontSize="11"
+                                    FontAttributes="Bold"
+                                    TextColor="#DCEAF5"
+                                    CharacterSpacing="1.5" />
+
+                                <Label
+                                    x:Name="FeaturedRegionLabel"
+                                    Text="Explore Northern Mindanao"
+                                    FontSize="23"
+                                    FontAttributes="Bold"
+                                    TextColor="#FFFFFF"
+                                    LineBreakMode="WordWrap" />
+
+                                <Label
+                                    Text="Discover places worth visiting."
+                                    FontSize="13"
+                                    TextColor="#F1F6FA" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Button
+                            x:Name="FeaturedRegionTapArea"
+                            Text=""
+                            BackgroundColor="Transparent"
+                            BorderWidth="0"
+                            Padding="0"
+                            Clicked="OnFeaturedRegionClicked" />
+                    </Grid>
+                </Border>
+
+                <!-- Two-panel segmented switcher -->
+                <Border
+                    MaximumWidthRequest="1000"
+                    Padding="4"
+                    Stroke="{StaticResource BorderBlue}"
+                    StrokeThickness="1"
+                    BackgroundColor="#EAF2F9"
+                    HorizontalOptions="Fill">
+
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <Grid
+                        MaximumWidthRequest="1000"
+                        ColumnDefinitions="*,*"
+                        ColumnSpacing="4">
+
+                        <Border
+                            x:Name="ExploreTabSurface"
+                            Grid.Column="0"
+                            Padding="0"
+                            BackgroundColor="{StaticResource PrimaryBlue}"
+                            StrokeThickness="0">
+
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                        </Border>
+
+                        <Border
+                            x:Name="RideTabSurface"
+                            Grid.Column="1"
+                            Padding="0"
+                            BackgroundColor="Transparent"
+                            StrokeThickness="0">
+
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                        </Border>
+
+                        <Button
+                            x:Name="ExploreTabButton"
+                            Grid.Column="0"
+                            Text="◎  Explore Categories"
+                            FontSize="13"
+                            FontAttributes="Bold"
+                            TextColor="White"
+                            BackgroundColor="Transparent"
+                            BorderWidth="0"
+                            CornerRadius="12"
+                            Padding="6,12"
+                            Clicked="OnExploreTabClicked"
+                            SemanticProperties.Description="Show Explore Categories panel"
+                            ZIndex="1" />
+
+                        <Button
+                            x:Name="RideTabButton"
+                            Grid.Column="1"
+                            Text="🚗  Ride Hailing"
+                            FontSize="13"
+                            FontAttributes="Bold"
+                            TextColor="{StaticResource DeepBlue}"
+                            BackgroundColor="Transparent"
+                            BorderWidth="0"
+                            CornerRadius="12"
+                            Padding="6,12"
+                            Clicked="OnRideTabClicked"
+                            SemanticProperties.Description="Show Ride Hailing panel"
+                            ZIndex="1" />
+                    </Grid>
+                </Border>
+
+                <!-- Panel host -->
+                <Grid
+                    x:Name="DiscoveryPanelsHost"
+                    HorizontalOptions="Fill"
+                    ColumnDefinitions="*">
+
+                    <!-- PANEL 1: EXPLORE CATEGORIES -->
+                    <Border
+                        x:Name="ExploreCategoriesPanel"
+                        Grid.Column="0"
+                        Stroke="{StaticResource BorderBlue}"
+                        StrokeThickness="1"
+                        BackgroundColor="{StaticResource SurfaceWhite}"
+                        Padding="16"
+                        MaximumWidthRequest="1000"
+                        IsVisible="True">
+
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="20" />
+                        </Border.StrokeShape>
+
+                        <VerticalStackLayout Spacing="20">
+
+                            <Grid
+                                ColumnDefinitions="*,Auto,Auto"
+                                ColumnSpacing="10">
+
+                                <VerticalStackLayout
+                                    Grid.Column="0"
+                                    Spacing="4"
+                                    VerticalOptions="Center">
+
+                                    <Label
+                                        Text="Explore categories"
+                                        FontSize="21"
+                                        FontAttributes="Bold"
+                                        TextColor="{StaticResource TextPrimary}" />
+
+                                    <Label
+                                        Text="Find places that interest you."
+                                        FontSize="13"
+                                        TextColor="{StaticResource TextSecondary}" />
+                                </VerticalStackLayout>
+
+                                <!-- Near Me -->
+                                <Border
+                                    Grid.Column="1"
+                                    WidthRequest="44"
+                                    HeightRequest="44"
+                                    BackgroundColor="{StaticResource SecondaryBlue}"
+                                    Stroke="{StaticResource BorderBlue}"
+                                    StrokeThickness="1"
+                                    VerticalOptions="Center">
+
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+
+                                    <Grid>
+                                        <Label
+                                            Text="⌖"
+                                            FontSize="25"
+                                            TextColor="{StaticResource DeepBlue}"
+                                            HorizontalTextAlignment="Center"
+                                            VerticalTextAlignment="Center"
+                                            InputTransparent="True" />
+
+                                        <Button
+                                            Text=""
+                                            SemanticProperties.Description="Find places near me"
+                                            BackgroundColor="Transparent"
+                                            BorderWidth="0"
+                                            Padding="0"
+                                            Clicked="OnNearMeClicked" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Refresh -->
+                                <Border
+                                    Grid.Column="2"
+                                    WidthRequest="44"
+                                    HeightRequest="44"
+                                    BackgroundColor="{StaticResource SecondaryBlue}"
+                                    Stroke="{StaticResource BorderBlue}"
+                                    StrokeThickness="1"
+                                    VerticalOptions="Center">
+
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+
+                                    <Grid>
+                                        <Label
+                                            Text="↻"
+                                            FontSize="25"
+                                            TextColor="{StaticResource DeepBlue}"
+                                            HorizontalTextAlignment="Center"
+                                            VerticalTextAlignment="Center"
+                                            InputTransparent="True" />
+
+                                        <Button
+                                            Text=""
+                                            SemanticProperties.Description="Refresh places"
+                                            BackgroundColor="Transparent"
+                                            BorderWidth="0"
+                                            Padding="0"
+                                            Clicked="OnRefreshClicked" />
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <BoxView
+                                HeightRequest="1"
+                                BackgroundColor="{StaticResource SecondaryBlue}" />
+
+                            <VerticalStackLayout
+                                x:Name="DiscoveryCategoriesLayout"
+                                Spacing="26" />
+
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- PANEL 2: RIDE HAILING PROVIDERS -->
+                    <Border
+                        x:Name="RideHailingPanel"
+                        Grid.Column="0"
+                        Stroke="{StaticResource BorderBlue}"
+                        StrokeThickness="1"
+                        BackgroundColor="{StaticResource SurfaceWhite}"
+                        Padding="16"
+                        MaximumWidthRequest="1000"
+                        IsVisible="False"
+                        Opacity="0"
+                        TranslationX="40">
+
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="20" />
+                        </Border.StrokeShape>
+
+                        <VerticalStackLayout Spacing="18">
+
+                            <VerticalStackLayout Spacing="4">
+                                <Label
+                                    Text="Ride-hailing providers"
+                                    FontSize="21"
+                                    FontAttributes="Bold"
+                                    TextColor="{StaticResource TextPrimary}" />
+
+                                <Label
+                                    Text="Explore providers and learn more about their services."
+                                    FontSize="13"
+                                    TextColor="{StaticResource TextSecondary}" />
+                            </VerticalStackLayout>
+
+                            <Border
+                                Padding="12"
+                                BackgroundColor="#FFF8E8"
+                                Stroke="#F0E0B7"
+                                StrokeThickness="1">
+
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12" />
+                                </Border.StrokeShape>
+
+                                <Label
+                                    Text="Provider details and service coverage are placeholders and have not been verified."
+                                    FontSize="12"
+                                    TextColor="#795E2B" />
+                            </Border>
+
+                            <!-- Generated provider cards -->
+                            <VerticalStackLayout
+                                x:Name="RideHailingProvidersLayout"
+                                Spacing="14" />
+
+                        </VerticalStackLayout>
+                    </Border>
+
+                </Grid>
             </VerticalStackLayout>
-
         </ScrollView>
 
+        <!-- Existing draggable map sheet -->
+<map:MapBottomSheet
+    x:Name="MapBottomSheetControl"
+    Grid.Row="0"
+    Grid.RowSpan="2"
+    HorizontalOptions="Fill"
+    VerticalOptions="End"
+    ZIndex="10" />
+
+        <settings:SettingsMenuView
+    x:Name="SettingsMenu"
+    Grid.RowSpan="2"
+    ZIndex="20" />
 
     </Grid>
-
 </ContentPage>

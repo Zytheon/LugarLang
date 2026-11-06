@@ -24,13 +24,13 @@ public class RoutingCandidateView : ContentView
 
     private enum SortMode
     {
+        Time,
         Walk,
         Ride
     }
 
     private SortMode currentSortMode =
-        SortMode.Walk;
-
+        SortMode.Time;
     public event EventHandler<RoutingDebugInfo>? CandidateSelected;
 
     public RoutingCandidateView()
@@ -67,7 +67,8 @@ public class RoutingCandidateView : ContentView
             groups
                 .OrderBy(
                     group =>
-                        group.Representative.TotalWalkingDistanceMeters)
+                        SegmentGraphJourneyRoutingService.EstimateTotalMinutes(
+                            group.Representative))
                 .Take(MaximumGroupsShown)
                 .ToList();
 
@@ -93,7 +94,9 @@ public class RoutingCandidateView : ContentView
             List<Journey> otherMembers =
                 group.Members
                     .Where(member => member != group.Representative)
-                    .OrderBy(member => member.TotalWalkingDistanceMeters)
+                    .OrderBy(
+                        member =>
+                            SegmentGraphJourneyRoutingService.EstimateTotalMinutes(member))
                     .ToList();
 
             representativeInfo.GroupMembers =
@@ -139,6 +142,27 @@ public class RoutingCandidateView : ContentView
         {
             rideRanked[i].RidePreferenceRank =
                 i + 1;
+        }
+
+        if (debugCandidates.Count > 1)
+        {
+            debugCandidates
+                .OrderBy(candidate => candidate.EstimatedMinutes)
+                .First()
+                .Badges.Add("Fastest");
+
+            debugCandidates
+                .OrderBy(candidate => candidate.TotalWalkingDistance)
+                .First()
+                .Badges.Add("Least walking");
+        }
+
+        foreach (RoutingDebugInfo candidate in debugCandidates)
+        {
+            if (candidate.NumberOfRides == 1)
+            {
+                candidate.Badges.Add("Direct");
+            }
         }
 
         foreach (
@@ -283,116 +307,82 @@ public class RoutingCandidateView : ContentView
     {
         int totalJourneys =
             currentSnapshot!.Candidates.Sum(
-                candidate =>
-                    1 + candidate.GroupMembers.Count);
+                candidate => 1 + candidate.GroupMembers.Count);
 
         contentLayout.Children.Add(
             new Label
             {
-                Text =
-                    $"Route options " +
-                    $"({currentSnapshot.Candidates.Count} groups, " +
-                    $"{totalJourneys} journeys total)",
-
+                Text = $"Route options ({totalJourneys})",
                 FontSize = 20,
-
-                FontAttributes =
-                    FontAttributes.Bold
+                FontAttributes = FontAttributes.Bold
             });
 
         contentLayout.Children.Add(
             new Label
             {
                 Text =
-                    $"Walking preference: " +
-                    $"{currentSnapshot.MaximumWalkingDistanceMeters:F0} m",
-
-                FontSize = 13
+                    "Flag a jeepney anywhere along the colored line. " +
+                    "Times are rough estimates (about 5 km/h walking, " +
+                    "15 km/h riding, plus a few minutes per transfer). " +
+                    $"Walking limit: {currentSnapshot.MaximumWalkingDistanceMeters:F0} m.",
+                FontSize = 12,
+                TextColor = Color.FromArgb("#5F6368")
             });
     }
 
     private void AddSortControls()
     {
-        HorizontalStackLayout controls =
-            new()
-            {
-                Spacing = 8
-            };
+        HorizontalStackLayout controls = new() { Spacing = 8 };
 
-        Button walkButton =
-            new()
-            {
-                Text =
-                    "Walk: least → most",
+        controls.Children.Add(CreateSortButton("Fastest", SortMode.Time));
+        controls.Children.Add(CreateSortButton("Least walking", SortMode.Walk));
+        controls.Children.Add(CreateSortButton("Shortest ride", SortMode.Ride));
 
-                FontSize = 12,
-
-                HorizontalOptions =
-                    LayoutOptions.Fill
-            };
-
-        Button rideButton =
-            new()
-            {
-                Text =
-                    "Ride: least → most",
-
-                FontSize = 12,
-
-                HorizontalOptions =
-                    LayoutOptions.Fill
-            };
-
-        walkButton.Clicked +=
-            (sender, args) =>
-            {
-                currentSortMode =
-                    SortMode.Walk;
-
-                Rebuild();
-            };
-
-        rideButton.Clicked +=
-            (sender, args) =>
-            {
-                currentSortMode =
-                    SortMode.Ride;
-
-                Rebuild();
-            };
-
-        controls.Children.Add(
-            walkButton);
-
-        controls.Children.Add(
-            rideButton);
-
-        contentLayout.Children.Add(
-            controls);
+        contentLayout.Children.Add(controls);
     }
 
-    private List<RoutingDebugInfo>
-        GetSortedCandidates()
+    private Button CreateSortButton(string text, SortMode mode)
+    {
+        bool selected = currentSortMode == mode;
+
+
+        Button button =
+            new()
+            {
+                Text = text,
+                FontSize = 12,
+                BackgroundColor =
+                    selected ? Color.FromArgb("#DCEAFE") : Colors.Transparent,
+                TextColor =
+                    selected ? Color.FromArgb("#174EA6") : Colors.DarkSlateGray,
+                MinimumHeightRequest = 48,
+                Padding = new Thickness(12, 0),
+            };
+
+        button.Clicked +=
+            (sender, args) =>
+            {
+                currentSortMode = mode;
+                Rebuild();
+            };
+
+        return button;
+    }
+
+    private List<RoutingDebugInfo> GetSortedCandidates()
     {
         IEnumerable<RoutingDebugInfo> candidates =
             currentSnapshot!.Candidates;
 
-        if (
-            currentSortMode ==
-            SortMode.Ride)
+        return currentSortMode switch
         {
-            return candidates
-                .OrderBy(
-                    candidate =>
-                        candidate.RideDistanceMeters)
-                .ToList();
-        }
-
-        return candidates
-            .OrderBy(
-                candidate =>
-                    candidate.TotalWalkingDistance)
-            .ToList();
+            SortMode.Ride =>
+                candidates.OrderBy(c => c.RideDistanceMeters).ToList(),
+            SortMode.Walk =>
+                candidates.OrderBy(c => c.TotalWalkingDistance).ToList(),
+            _ =>
+                candidates.OrderBy(c => c.EstimatedMinutes).ToList()
+        };
     }
 
     private void CandidateCard_Selected(

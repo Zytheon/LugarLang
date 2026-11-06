@@ -26,13 +26,12 @@ public class TripVisualizationService
             return;
         }
 
-        foreach (
-            JourneyLeg leg
-            in journey.Legs)
+        for (int i = 0; i < journey.Legs.Count; i++)
         {
             DrawJourneyLeg(
                 mapControl,
-                leg);
+                journey.Legs[i],
+                i);
         }
     }
 
@@ -52,10 +51,17 @@ public class TripVisualizationService
 
     private void DrawJourneyLeg(
         MapControl mapControl,
-        JourneyLeg leg)
+        JourneyLeg leg,
+        int rideIndex)
     {
         DirectionEvaluation evaluation =
             leg.Evaluation;
+
+        (int r, int g, int b) =
+            JourneyPresentation.GetRideRgb(rideIndex);
+
+        Mapsui.Styles.Color rideColor =
+            new(r, g, b);
 
         DrawWalkingConnection(
             mapControl,
@@ -66,12 +72,16 @@ public class TripVisualizationService
             mapControl,
             evaluation.Direction.Path,
             evaluation.FromIndex,
-            evaluation.ToIndex);
+            evaluation.ToIndex,
+            rideColor);
 
         DrawWalkingConnection(
             mapControl,
             evaluation.NearestTo,
             evaluation.To);
+
+        DrawMarker(mapControl, evaluation.NearestFrom, rideColor);
+        DrawMarker(mapControl, evaluation.NearestTo, rideColor);
     }
 
     private void DrawWalkingConnection(
@@ -105,7 +115,8 @@ public class TripVisualizationService
         MapControl mapControl,
         IList<GeoPoint> path,
         int fromIndex,
-        int toIndex)
+        int toIndex,
+        Mapsui.Styles.Color color)
     {
         if (
             fromIndex < 0 ||
@@ -153,9 +164,7 @@ public class TripVisualizationService
             new VectorStyle
             {
                 Line =
-                    new Pen(
-                        Mapsui.Styles.Color.LightSkyBlue,
-                        7)
+                    new Pen(color,7)
             });
 
         MemoryLayer layer =
@@ -176,6 +185,43 @@ public class TripVisualizationService
 
         mapControl.Map?.Layers.Add(
             layer);
+    }
+
+    private void DrawMarker(
+    MapControl mapControl,
+    GeoPoint point,
+    Mapsui.Styles.Color color)
+    {
+        MPoint projected = Project(point);
+
+        GeometryFeature feature =
+            new()
+            {
+                Geometry =
+                    new NetTopologySuite.Geometries.Point(
+                        projected.X,
+                        projected.Y)
+            };
+
+        feature.Styles.Add(
+            new SymbolStyle
+            {
+                SymbolType = SymbolType.Ellipse,
+                SymbolScale = 0.45,
+                Fill = new Mapsui.Styles.Brush(color),
+                Outline = new Pen(Mapsui.Styles.Color.White, 2)
+            });
+
+        MemoryLayer layer =
+            new()
+            {
+                Name = "Journey Marker",
+                Features = new List<IFeature> { feature }
+            };
+
+        journeyLayers.Add(layer);
+
+        mapControl.Map?.Layers.Add(layer);
     }
 
     private MemoryLayer CreateWalkingLayer(

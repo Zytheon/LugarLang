@@ -28,6 +28,9 @@ public class RoutingDebugInfo
     public int WalkPreferenceRank { get; set; }
 
     public int RidePreferenceRank { get; set; }
+    public double EstimatedMinutes { get; set; }
+
+public List<string> Badges { get; set; } = new();
 
     /// <summary>
     /// Other journeys grouped with this one by JourneyGroupingService
@@ -48,7 +51,7 @@ public class RoutingDebugInfo
                 " → ",
                 Legs.Select(
                     leg =>
-                        $"{leg.RouteName} ({leg.DirectionName})"));
+                        $"{leg.RouteName} ({(string.IsNullOrEmpty(leg.DirectionLabel) ? leg.DirectionName : leg.DirectionLabel)})"));
         }
     }
 }
@@ -66,4 +69,5 @@ public class RoutingDebugLegInfo
     public double ToWalkingDistance { get; set; }
 
     public double RideDistanceMeters { get; set; }
+    public string DirectionLabel { get; set; } = "";
 }

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.RideHailingManagementPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Ride Hailing Management"
+    BackgroundColor="#F1F6FA">
+
+    <Grid Padding="20" RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Spacing="14">
+
+            <Label
+                Text="Ride Hailing Providers"
+                FontSize="26"
+                FontAttributes="Bold"
+                TextColor="#253B50" />
+
+            <Label
+                Text="Manage the providers displayed in Discover."
+                FontSize="14"
+                TextColor="#627B92" />
+
+            <Button
+                Text="+ Add Provider"
+                HeightRequest="48"
+                CornerRadius="12"
+                BackgroundColor="#486F91"
+                TextColor="White"
+                HorizontalOptions="Fill"
+                Clicked="OnAddProviderClicked" />
+
+        </VerticalStackLayout>
+
+        <ScrollView Grid.Row="1" Margin="0,18,0,0">
+
+            <VerticalStackLayout Spacing="12">
+
+                <Label
+                    x:Name="EmptyStateLabel"
+                    Text="No ride-hailing providers have been added yet."
+                    FontSize="15"
+                    TextColor="#627B92"
+                    HorizontalTextAlignment="Center"
+                    VerticalTextAlignment="Center"
+                    Margin="12,30"
+                    IsVisible="False" />
+
+                <VerticalStackLayout
+                    x:Name="ProvidersLayout"
+                    Spacing="12" />
+
+            </VerticalStackLayout>
+
+        </ScrollView>
+
+    </Grid>
+</ContentPage>

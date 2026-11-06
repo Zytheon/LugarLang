@@ -1,4 +1,4 @@
-﻿using CdoGtfsConverter.Models;
+using CdoGtfsConverter.Models;
 using LugarLang.Mobile.Application.Routing;
 using LugarLang.Mobile.Services.Mapping;
 using LugarLang.Mobile.Services.Mapping.Factories;
@@ -15,10 +15,11 @@ using Mapsui;
 using Mapsui.Layers;
 using Mapsui.Tiling;
 using Mapsui.UI.Maui;
+using Microsoft.Maui.Devices;
 
-namespace LugarLang.Mobile.Pages;
+namespace LugarLang.Mobile.UI.Map;
 
-public partial class MapPage : ContentPage
+public partial class MapPanelView : ContentView
 {
     private readonly RouteDisplayService routeDisplayService;
     private readonly MapControl mapControl;
@@ -30,9 +31,8 @@ public partial class MapPage : ContentPage
     private readonly TransitDataService transitDataService;
     private readonly RouteAccessibilityService routeAccessibilityService;
     private readonly TripRoutingService tripRoutingService;
-    private readonly JourneyRoutingService journeyRoutingService;
+
     private readonly SegmentGraphJourneyRoutingService segmentGraphJourneyRoutingService;
-    private IJourneyRoutingService activeJourneyRoutingService = null!;
     private readonly RoutingCandidateService routingCandidateService;
     private readonly RoutingVisualizationService routingVisualizationService;
     private readonly RoutingCandidateView routingCandidateView;
@@ -45,10 +45,6 @@ public partial class MapPage : ContentPage
     private Button fromButton = null!;
     private Button toButton = null!;
 
-    private HorizontalStackLayout algorithmToggle = null!;
-    private Label algorithmToggleLabel = null!;
-    private Switch algorithmToggleSwitch = null!;
-
     private MemoryLayer? inboundLayer;
     private MemoryLayer? outboundLayer;
     private double maximumWalkingDistanceMeters = 500;
@@ -60,7 +56,7 @@ public partial class MapPage : ContentPage
 
     private List<Journey> currentJourneys = new();
 
-    public MapPage()
+    public MapPanelView()
     {
         InitializeComponent();
 
@@ -80,9 +76,6 @@ public partial class MapPage : ContentPage
         transitDataService =
             new TransitDataService();
 
-        transitDataService =
-            new TransitDataService();
-
         RouteGeometryIndex routeGeometryIndex =
             new RouteGeometryIndex(
                 transitDataService.Network.Routes);
@@ -93,17 +86,6 @@ public partial class MapPage : ContentPage
 
         tripRoutingService =
             new TripRoutingService(
-                routeAccessibilityService);
-
-        RouteTransferService routeTransferService =
-            new RouteTransferService(
-                routeAccessibilityService,
-                routeGeometryIndex);
-
-        journeyRoutingService =
-            new JourneyRoutingService(
-                tripRoutingService,
-                routeTransferService,
                 routeAccessibilityService);
 
         System.Diagnostics.Stopwatch graphLoadTimer =
@@ -137,11 +119,6 @@ public partial class MapPage : ContentPage
             new SegmentGraphJourneyRoutingService(
                 routeGraph);
 
-        // Defaults to the existing, already-shipped algorithm. The
-        // toggle below is the only thing that switches this.
-        activeJourneyRoutingService =
-            journeyRoutingService;
-
         routingCandidateService =
             new RoutingCandidateService();
 
@@ -170,7 +147,9 @@ public partial class MapPage : ContentPage
             new MapControl();
 
         mapControl.Map?.Layers.Add(
-            OpenStreetMap.CreateTileLayer());
+            OpenStreetMap.CreateTileLayer(
+                "LugarLang/1.0 (fernandicokenrich@gmail.com)"));
+
         var initialCenter =
     Mapsui.Projections.SphericalMercator
         .FromLonLat(
@@ -186,7 +165,7 @@ public partial class MapPage : ContentPage
         routePicker =
             new Picker
             {
-                Title = "Debug route",
+                Title = "Find a route",
                 Margin = new Thickness(5),
                 HorizontalOptions =
                     LayoutOptions.Fill
@@ -249,35 +228,6 @@ public partial class MapPage : ContentPage
                     .StartSettingTo();
             };
 
-        algorithmToggleLabel =
-            new Label
-            {
-                Text = "Segment graph",
-                VerticalOptions = LayoutOptions.Center,
-                Margin = new Thickness(5, 0, 0, 0)
-            };
-
-        algorithmToggleSwitch =
-            new Switch
-            {
-                IsToggled = false,
-                VerticalOptions = LayoutOptions.Center
-            };
-
-        algorithmToggleSwitch.Toggled +=
-            AlgorithmToggleSwitch_Toggled;
-
-        algorithmToggle =
-            new HorizontalStackLayout
-            {
-                Margin = new Thickness(5),
-                Children =
-                {
-                    algorithmToggleLabel,
-                    algorithmToggleSwitch
-                }
-            };
-
         mapControl.Info +=
             MapControl_Info;
 
@@ -307,22 +257,6 @@ public partial class MapPage : ContentPage
                 maximumWalkingDistanceMeters = 1000;
                 break;
         }
-
-        RecalculateAccessibility();
-    }
-
-    private void AlgorithmToggleSwitch_Toggled(
-        object? sender,
-        ToggledEventArgs e)
-    {
-        activeJourneyRoutingService =
-            e.Value
-                ? segmentGraphJourneyRoutingService
-                : journeyRoutingService;
-
-        System.Diagnostics.Debug.WriteLine(
-            $"ALGORITHM SWITCHED: now using " +
-            $"{(e.Value ? "SegmentGraphJourneyRoutingService" : "JourneyRoutingService")}");
 
         RecalculateAccessibility();
     }
@@ -358,7 +292,8 @@ public partial class MapPage : ContentPage
     }
 
     private void SetFromPin(
-        MPoint position)
+        MPoint position,
+        bool recalculate = true)
     {
         if (fromPoint != null)
         {
@@ -383,11 +318,13 @@ public partial class MapPage : ContentPage
         mapControl.Map?.Layers.Add(
             fromLayer);
 
-        RecalculateAccessibility();
+        if (recalculate)
+            RecalculateAccessibility();
     }
 
     private void SetToPin(
-        MPoint position)
+        MPoint position,
+        bool recalculate = true)
     {
         if (toPoint != null)
         {
@@ -412,26 +349,33 @@ public partial class MapPage : ContentPage
         mapControl.Map?.Layers.Add(
             toLayer);
 
-        RecalculateAccessibility();
+        if (recalculate)
+            RecalculateAccessibility();
     }
 
-    protected override void OnAppearing()
+    public void FindRoutes(
+    LugarLang.Internal.Models.Place from,
+    LugarLang.Internal.Models.Place to)
     {
-        base.OnAppearing();
+        SetFromPin(
+            ProjectGeoPoint(
+                new GeoPoint
+                {
+                    Latitude = from.Latitude,
+                    Longitude = from.Longitude
+                }),
+            recalculate: false);
 
-        GeoPoint? pendingFrom = PendingLocationSelection.PendingFrom;
-        if (pendingFrom != null)
-        {
-            SetFromPin(ProjectGeoPoint(pendingFrom));
-            PendingLocationSelection.PendingFrom = null;
-        }
+        SetToPin(
+            ProjectGeoPoint(
+                new GeoPoint
+                {
+                    Latitude = to.Latitude,
+                    Longitude = to.Longitude
+                }),
+            recalculate: false);
 
-        GeoPoint? pendingTo = PendingLocationSelection.PendingTo;
-        if (pendingTo != null)
-        {
-            SetToPin(ProjectGeoPoint(pendingTo));
-            PendingLocationSelection.PendingTo = null;
-        }
+        RecalculateAccessibility();
     }
 
     private MPoint ProjectGeoPoint(GeoPoint point)
@@ -483,7 +427,7 @@ public partial class MapPage : ContentPage
             $"{currentCandidates.Count} direct candidates.");
 
         currentJourneys =
-            activeJourneyRoutingService.FindJourneys(
+                segmentGraphJourneyRoutingService.FindJourneys(
                 transitDataService.Network.Routes,
                 fromPoint,
                 toPoint,
@@ -625,6 +569,16 @@ public partial class MapPage : ContentPage
 
     private void BuildResponsiveLayout()
     {
+        double layoutWidth = Width;
+
+        if (layoutWidth <= 0)
+        {
+            double density = DeviceDisplay.MainDisplayInfo.Density;
+            layoutWidth = density > 0
+                ? DeviceDisplay.MainDisplayInfo.Width / density
+                : 390;
+        }
+
         Content =
             layoutBuilder.Build(
                 mapControl,
@@ -633,7 +587,6 @@ public partial class MapPage : ContentPage
                 walkingDistancePicker,
                 fromButton,
                 toButton,
-                algorithmToggle,
-                Width);
+                layoutWidth);
     }
 }

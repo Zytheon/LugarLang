@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="LugarLang.Mobile.Pages.RideHailingProviderDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Ride Provider"
+    BackgroundColor="#F1F6FA">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Temporary hero-image placeholder -->
+            <!-- Provider banner -->
+            <Border
+    x:Name="ProviderImageSurface"
+    HeightRequest="240"
+    StrokeThickness="0">
+
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
+
+                <Grid>
+
+                    <!-- Actual provider photo -->
+                    <Image
+            x:Name="ProviderBannerImage"
+            Aspect="AspectFill"
+            HorizontalOptions="Fill"
+            VerticalOptions="Fill"
+            IsVisible="False"
+            InputTransparent="True" />
+
+                    <!-- Fallback symbol -->
+                    <Label
+            x:Name="ProviderSymbolLabel"
+            Text="🚗"
+            FontSize="76"
+            HorizontalOptions="Center"
+            VerticalOptions="Center" />
+
+                    <!-- Fallback placeholder label -->
+                    <Label
+            x:Name="ProviderPlaceholderLabel"
+            Text="IMAGE PLACEHOLDER"
+            FontSize="10"
+            FontAttributes="Bold"
+            CharacterSpacing="1.5"
+            TextColor="White"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="12" />
+
+                </Grid>
+            </Border>
+
+            <VerticalStackLayout Spacing="6">
+                <Label
+                    x:Name="ProviderNameLabel"
+                    FontSize="30"
+                    FontAttributes="Bold"
+                    TextColor="#253B50" />
+
+                <Label
+                    x:Name="ProviderTypeLabel"
+                    FontSize="14"
+                    TextColor="#627B92" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label
+                    Text="About this provider"
+                    FontSize="22"
+                    FontAttributes="Bold"
+                    TextColor="#253B50" />
+
+                <Label
+                    x:Name="ProviderDescriptionLabel"
+                    FontSize="16"
+                    TextColor="#34566F"
+                    LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+
+            <Border
+                Padding="16"
+                BackgroundColor="White"
+                Stroke="#D6E2ED"
+                StrokeThickness="1">
+
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+
+                <VerticalStackLayout Spacing="8">
+                    <Label
+                        Text="Service coverage"
+                        FontSize="18"
+                        FontAttributes="Bold"
+                        TextColor="#253B50" />
+
+                    <Label
+                        x:Name="ProviderCoverageLabel"
+                        FontSize="14"
+                        TextColor="#627B92" />
+
+                    <Label
+                        Text="This is placeholder information. Check the provider's official service information before relying on availability."
+                        FontSize="12"
+                        TextColor="#627B92" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button
+                Text="Back to Ride Hailing"
+                HeightRequest="50"
+                CornerRadius="14"
+                BackgroundColor="#486F91"
+                TextColor="White"
+                Clicked="OnBackClicked" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+    
