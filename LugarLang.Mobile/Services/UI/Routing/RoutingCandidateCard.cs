@@ -27,18 +27,11 @@ public class RoutingCandidateCard : Border
     {
         Candidate = candidate;
 
-        Padding = 12;
-
+        Padding = 14;
+        Stroke = Theme.Border;
         StrokeThickness = 1;
-
-        StrokeShape =
-            new RoundRectangle
-            {
-                CornerRadius = 10
-            };
-
-        BackgroundColor =
-            Colors.Transparent;
+        BackgroundColor = Theme.Surface;
+        StrokeShape = new RoundRectangle { CornerRadius = 16 };
 
         Content =
             CreateContent();
@@ -72,7 +65,8 @@ public class RoutingCandidateCard : Border
                     $"{JourneyPresentation.FormatDistance(Candidate.TotalWalkingDistance)} walk · " +
                     $"{JourneyPresentation.FormatKilometers(Candidate.RideDistanceMeters)} ride",
                 FontSize = 16,
-                FontAttributes = FontAttributes.Bold
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Theme.TextPrimary
             });
 
         if (Candidate.Badges.Count > 0)
@@ -145,14 +139,28 @@ public class RoutingCandidateCard : Border
                     }
                 };
 
-            Label rideLabel =
+            VerticalStackLayout rideLabel =
                 new()
                 {
-                    Text =
-                        $"{leg.RouteName} {leg.DirectionLabel} · " +
-                        $"{JourneyPresentation.FormatKilometers(leg.RideDistanceMeters)}",
-                    FontSize = 14,
-                    VerticalOptions = LayoutOptions.Center
+                    Spacing = 1,
+                    VerticalOptions = LayoutOptions.Center,
+                    Children =
+                    {
+            new Label
+            {
+                Text = leg.FullRouteName,
+                FontSize = 14,
+                FontAttributes = FontAttributes.Bold
+            },
+            new Label
+            {
+                Text =
+                    $"{(string.IsNullOrWhiteSpace(leg.DirectionSummary) ? leg.DirectionName : leg.DirectionSummary)} · " +
+                    $"{JourneyPresentation.FormatKilometers(leg.RideDistanceMeters)}",
+                FontSize = 12,
+                TextColor = Color.FromArgb("#5F6368")
+            }
+                    }
                 };
 
             Grid rideRow =
@@ -251,7 +259,7 @@ public class RoutingCandidateCard : Border
 
                     FontSize = 12,
 
-                    TextColor = Color.FromArgb("#174EA6"),
+                    TextColor = Theme.TextPrimary,
                     MinimumHeightRequest = 48,
                     VerticalTextAlignment = TextAlignment.Center
                 };

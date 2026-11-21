@@ -124,6 +124,22 @@ public class JourneyLeg
         }
     }
 
+    public string RouteCode
+    {
+        get
+        {
+            return Evaluation.Route.Code;
+        }
+    }
+
+    public string DirectionSummary
+    {
+        get
+        {
+            return Evaluation.Direction.Summary;
+        }
+    }
+
     public string DirectionName
     {
         get

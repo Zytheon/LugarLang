@@ -42,6 +42,8 @@ public class RoutingCandidateView : ContentView
                 Padding = 12
             };
 
+        BackgroundColor = Theme.PageBackground;
+
         Content =
             new ScrollView
             {
@@ -215,7 +217,10 @@ public class RoutingCandidateView : ContentView
                     maximumWalkingDistanceMeters,
 
                 Score =
-                    0
+                    0,
+
+                EstimatedMinutes =
+    SegmentGraphJourneyRoutingService.EstimateTotalMinutes(journey)
             };
 
         foreach (
@@ -230,6 +235,11 @@ public class RoutingCandidateView : ContentView
 
                     RouteName =
                         leg.RouteName,
+                    RouteCode =
+                        leg.RouteCode,
+
+                    DirectionSummary =
+                        leg.DirectionSummary,
 
                     DirectionName =
                         leg.DirectionName,
@@ -312,21 +322,32 @@ public class RoutingCandidateView : ContentView
         contentLayout.Children.Add(
             new Label
             {
-                Text = $"Route options ({totalJourneys})",
+                Text = "Route options",
                 FontSize = 20,
-                FontAttributes = FontAttributes.Bold
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Theme.TextPrimary
+            });
+
+        contentLayout.Children.Add(
+            new BoxView
+            {
+                HeightRequest = 3,
+                WidthRequest = 38,
+                Color = Theme.Primary,
+                HorizontalOptions = LayoutOptions.Start,
+                Margin = new Thickness(0, -6, 0, 0)
             });
 
         contentLayout.Children.Add(
             new Label
             {
                 Text =
-                    "Flag a jeepney anywhere along the colored line. " +
+                    $"{totalJourneys} journeys · flag a jeepney anywhere along the colored line. " +
                     "Times are rough estimates (about 5 km/h walking, " +
                     "15 km/h riding, plus a few minutes per transfer). " +
                     $"Walking limit: {currentSnapshot.MaximumWalkingDistanceMeters:F0} m.",
                 FontSize = 12,
-                TextColor = Color.FromArgb("#5F6368")
+                TextColor = Theme.TextSecondary
             });
     }
 
@@ -350,13 +371,15 @@ public class RoutingCandidateView : ContentView
             new()
             {
                 Text = text,
-                FontSize = 12,
+                FontSize = 13,
+                CornerRadius = 20,
+                BorderWidth = 0,
                 BackgroundColor =
-                    selected ? Color.FromArgb("#DCEAFE") : Colors.Transparent,
+                    selected ? Theme.Primary : Theme.Secondary,
                 TextColor =
-                    selected ? Color.FromArgb("#174EA6") : Colors.DarkSlateGray,
+                    selected ? Colors.White : Theme.Deep,
                 MinimumHeightRequest = 48,
-                Padding = new Thickness(12, 0),
+                Padding = new Thickness(14, 0)
             };
 
         button.Clicked +=
@@ -420,7 +443,7 @@ public class RoutingCandidateView : ContentView
             new Label
             {
                 Text = text,
-
+                TextColor = Theme.TextSecondary,
                 FontSize = 14
             });
     }

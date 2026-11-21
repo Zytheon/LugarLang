@@ -22,13 +22,13 @@ public sealed class MapBottomSheet : ContentView
     private const double HeaderHeight = 58;
     private const double ClosedVisibleHeight = HeaderHeight + 1;
     private const double MinimumTargetSize = 48;
-    private const double MaximumSheetWidth = 800;
+    private const double MaximumSheetWidth = 1000;
     private const double MapPanelHeightRatio = 0.86;
     private const double PanelAContentHeight = 252;
 
     private const uint AnimationMs = 250;
     private const string HeightAnimationName = "SheetHeight";
-    private const string SecondaryTextColorHex = "#5F6368";
+    private const string SecondaryTextColorHex = "#627B92";
 
     // ---- Controls ---------------------------------------------------
 
@@ -145,8 +145,8 @@ public sealed class MapBottomSheet : ContentView
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
             Padding = 0,
-            BackgroundColor = Colors.White,
-            Stroke = new SolidColorBrush(Colors.LightGray),
+            BackgroundColor = Theme.PageBackground,
+            Stroke = new SolidColorBrush(Theme.Border),
             StrokeThickness = 1,
             StrokeShape = new RoundRectangle
             {
@@ -198,7 +198,7 @@ public sealed class MapBottomSheet : ContentView
                     new Microsoft.Maui.Graphics.Point(10, 8),
                     new Microsoft.Maui.Graphics.Point(18, 2)
                 },
-                Stroke = new SolidColorBrush(Colors.DarkSlateGray),
+                Stroke = new SolidColorBrush(Theme.Deep),
                 StrokeThickness = 3,
                 StrokeLineCap = PenLineCap.Round,
                 StrokeLineJoin = PenLineJoin.Round,
@@ -265,16 +265,43 @@ public sealed class MapBottomSheet : ContentView
         findRoutesButton = new Button
         {
             Text = "Find Routes",
-            HeightRequest = 50,
-            CornerRadius = 12,
-            TextColor = Colors.White,
-            IsEnabled = ready,
-            BackgroundColor = ready
-                ? Color.FromArgb("#1A73E8")
-                : Color.FromArgb("#C4C7CC")
+            HeightRequest = 52,
+            CornerRadius = 14,
+            TextColor = ready ? Colors.White : Theme.TextSecondary,
+            BackgroundColor = ready ? Theme.Primary : Theme.Border,
+            IsEnabled = ready
         };
 
         findRoutesButton.Clicked += OnFindRoutesClicked;
+
+        Button clearAllButton = new Button
+        {
+            Text = "Clear all",
+            HeightRequest = 52,
+            WidthRequest = 104,
+            CornerRadius = 14,
+            BackgroundColor = Theme.Secondary,
+            BorderColor = Theme.Border,
+            BorderWidth = 1,
+            TextColor = Theme.Deep,
+            IsEnabled = RouteEndpoints.From != null || RouteEndpoints.To != null
+        };
+
+        clearAllButton.Clicked += (_, _) => ClearAll();
+
+        Grid actionRow = new Grid
+        {
+            ColumnSpacing = 10,
+            ColumnDefinitions =
+    {
+        new ColumnDefinition(GridLength.Star),
+        new ColumnDefinition(GridLength.Auto)
+    }
+        };
+
+        Grid.SetColumn(clearAllButton, 1);
+        actionRow.Children.Add(findRoutesButton);
+        actionRow.Children.Add(clearAllButton);
 
         mapHost.Children.Add(
             new VerticalStackLayout
@@ -282,11 +309,11 @@ public sealed class MapBottomSheet : ContentView
                 Padding = new Thickness(16),
                 Spacing = 12,
                 Children =
-                {
-                    BuildEndpointRow("Start", RouteEndpoints.From),
-                    BuildEndpointRow("End", RouteEndpoints.To),
-                    findRoutesButton
-                }
+                    {
+                        BuildEndpointRow("Start", RouteEndpoints.From, ClearStart),
+                        BuildEndpointRow("End", RouteEndpoints.To, ClearEnd),
+                        actionRow
+                    }
             });
     }
 
@@ -302,12 +329,40 @@ public sealed class MapBottomSheet : ContentView
             RouteEndpoints.To);
     }
 
-    private static View BuildEndpointRow(string caption, Place? place)
+    private void ClearStart()
+    {
+        RouteEndpoints.From = null;
+        RefreshPanelA();
+    }
+
+    private void ClearEnd()
+    {
+        RouteEndpoints.To = null;
+        RefreshPanelA();
+    }
+
+    private void ClearAll()
+    {
+        RouteEndpoints.From = null;
+        RouteEndpoints.To = null;
+        RefreshPanelA();
+    }
+
+    private void RefreshPanelA()
+    {
+        // Keep these in sync so ApplyPendingLocationSelection
+        // doesn't see a change and slide the sheet open.
+        shownFrom = RouteEndpoints.From;
+        shownTo = RouteEndpoints.To;
+
+        ShowPanelA();
+    }
+    private static View BuildEndpointRow(string caption, Place? place, Action onClear)
     {
         Image photo = new Image
         {
             Aspect = Aspect.AspectFill,
-            BackgroundColor = Color.FromArgb("#E5E7EB")
+            BackgroundColor = Theme.Placeholder
         };
 
         if (place != null && place.Photos.Count > 0)
@@ -338,6 +393,7 @@ public sealed class MapBottomSheet : ContentView
                 {
                     Text = place?.Name ?? "Not set",
                     FontSize = 18,
+                    TextColor = Theme.TextPrimary,
                     FontAttributes = FontAttributes.Bold,
                     MaxLines = 2,
                     LineBreakMode = LineBreakMode.TailTruncation
@@ -351,23 +407,45 @@ public sealed class MapBottomSheet : ContentView
             ColumnDefinitions =
             {
                 new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star)
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
             }
         };
 
+        Button clearButton = new Button
+        {
+            Text = "✕",
+            FontSize = 16,
+            Padding = 0,
+            WidthRequest = MinimumTargetSize,
+            HeightRequest = MinimumTargetSize,
+            CornerRadius = (int)(MinimumTargetSize / 2),
+            BackgroundColor = Theme.Secondary,
+            TextColor = Theme.Deep,
+            VerticalOptions = LayoutOptions.Center,
+            IsVisible = place != null
+        };
+
+        clearButton.Clicked += (_, _) => onClear();
+
+        SemanticProperties.SetDescription(clearButton, $"Clear {caption.ToLower()}");
+
         Grid.SetColumn(text, 1);
+        Grid.SetColumn(clearButton, 2);
+
         row.Children.Add(photoFrame);
         row.Children.Add(text);
+        row.Children.Add(clearButton);
 
         return row;
     }
 
     private void UpdatePanelButtonStyles()
     {
-        Color selectedColor = Color.FromArgb("#DCEAFE");
+        Color selectedColor = Theme.Primary;
         Color normalColor = Colors.Transparent;
-        Color selectedTextColor = Color.FromArgb("#174EA6");
-        Color normalTextColor = Colors.DarkSlateGray;
+        Color selectedTextColor = Colors.White;
+        Color normalTextColor = Theme.Deep;
 
         panelAButton.BackgroundColor =
             selectedPanel == "A" ? selectedColor : normalColor;

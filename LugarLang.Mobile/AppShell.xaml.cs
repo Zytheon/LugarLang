@@ -41,7 +41,6 @@ public partial class AppShell : Shell
 #if DEV
     private void ConnectManagementPages()
     {
-        // Categories Management
         developerOverlayManager.CategoriesManagementRequested =
             async () =>
             {
@@ -52,7 +51,6 @@ public partial class AppShell : Shell
                 await Navigation.PushAsync(page);
             };
 
-        // Places Management
         developerOverlayManager.PlacesManagementRequested =
             async () =>
             {
@@ -63,7 +61,6 @@ public partial class AppShell : Shell
                 await Navigation.PushAsync(page);
             };
 
-        // Ride Hailing Management
         developerOverlayManager.RideHailingManagementRequested =
             async () =>
             {

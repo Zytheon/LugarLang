@@ -1,11 +1,11 @@
-﻿using LugarLang.Mobile.Pages;
+﻿
+using LugarLang.Mobile.Pages;
 using LugarLang.Mobile.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LugarLang.Mobile;
 
-public partial class App
-    : Microsoft.Maui.Controls.Application
+public partial class App : Microsoft.Maui.Controls.Application
 {
     public App()
     {
@@ -15,11 +15,17 @@ public partial class App
     protected override Window CreateWindow(
         IActivationState? activationState)
     {
-        Page startPage = AppSettings.OnboardingDone
+        return new Window(new SplashPage());
+    }
+
+    public void ShowMainPage()
+    {
+        if (Windows.Count == 0)
+            return;
+
+        Windows[0].Page = AppSettings.OnboardingDone
             ? ResolveShell()
             : new OnboardingPage();
-
-        return new Window(startPage);
     }
 
     public void FinishOnboarding()

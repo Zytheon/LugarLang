@@ -5,12 +5,6 @@
 		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
-		<!-- Note for MacCatalyst:
-		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
-		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
-		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
-		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
-
 		<OutputType>Exe</OutputType>
 		<RootNamespace>LugarLang.Mobile</RootNamespace>
 		<UseMaui>true</UseMaui>
@@ -59,34 +53,37 @@
 		<AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 	</PropertyGroup>
 
-	<!-- Android Release: 64-bit ARM only (smaller APK, no 32-bit or x86 code) -->
-	<PropertyGroup Condition="'$(Configuration)'=='Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
-	</PropertyGroup>
-
 	<!-- MAUI Resources -->
 	<ItemGroup>
 
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\Images\lugarlang_logo.png"
+                  ForegroundFile="Resources\Images\lugarlang_logo.png"
+                  ForegroundScale="0.8"
+                  Color="#F1F6FA" />
 
-		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<!-- Native Splash Screen -->
+		<MauiSplashScreen Include="Resources\Images\lugarlang_logo.png"
+                          Color="#F1F6FA" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+
+		<!-- Exclude logo from regular image processing -->
+		<MauiImage Remove="Resources\Images\lugarlang_logo.png" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
 		<!-- Raw Assets -->
-		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="Resources\Raw\**"
+                   LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 
 	</ItemGroup>
 
 	<!-- NuGet Packages -->
 	<ItemGroup>
+
 		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
 
 		<PackageReference Include="Mapsui" Version="5.1.0" />
@@ -104,12 +101,16 @@
 		</PackageReference>
 
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+
 	</ItemGroup>
 
-	<!-- Backend Project -->
+	<!-- Backend Project References -->
 	<ItemGroup>
+
 		<ProjectReference Include="..\..\CdoGtfsConverter\CdoGtfsConverter.Backend\CdoGtfsConverter.csproj" />
+
 		<ProjectReference Include="..\..\LugarLang-Internal\LugarLang.Internal.csproj" />
+
 	</ItemGroup>
 
 	<!-- XAML Files -->
@@ -120,15 +121,19 @@
 		</MauiXaml>
 
 		<MauiXaml Update="Pages\RideHailingManagementPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
 		<MauiXaml Update="Pages\RideHailingProviderDetailsPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
 		<MauiXaml Update="Pages\RideHailingProviderEditPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+
+		<MauiXaml Update="Pages\SplashPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 
 		<MauiXaml Update="Services\UI\Map\MapPanelView.xaml">
@@ -139,25 +144,31 @@
 
 	<!-- Folders -->
 	<ItemGroup>
+
 		<Folder Include="Components\Map\" />
 		<Folder Include="Components\Discovery\" />
 		<Folder Include="Components\Common\" />
 		<Folder Include="Controls\" />
 		<Folder Include="Models\Routing\" />
 		<Folder Include="Services\Discovery\" />
+
 	</ItemGroup>
+
+	<!-- XAML Code-Behind Relationships -->
 	<ItemGroup>
+
 		<Compile Update="Pages\RideHailingManagementPage.xaml.cs">
-		  <DependentUpon>RideHailingManagementPage.xaml</DependentUpon>
+			<DependentUpon>RideHailingManagementPage.xaml</DependentUpon>
 		</Compile>
+
 		<Compile Update="Pages\RideHailingProviderDetailsPage.xaml.cs">
-		  <DependentUpon>RideHailingProviderDetailsPage.xaml</DependentUpon>
+			<DependentUpon>RideHailingProviderDetailsPage.xaml</DependentUpon>
 		</Compile>
+
 		<Compile Update="Services\UI\Map\MapPanelView.xaml.cs">
 			<DependentUpon>MapPanelView.xaml</DependentUpon>
 		</Compile>
-	</ItemGroup>
 
-	<!-- XAML code-behind relationship -->
+	</ItemGroup>
 
 </Project>

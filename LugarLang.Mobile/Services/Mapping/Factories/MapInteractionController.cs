@@ -29,6 +29,11 @@ public class MapInteractionController
         CurrentMode = PinMode.SettingTo;
     }
 
+    public void Cancel()
+    {
+        CurrentMode = PinMode.None;
+    }
+
     public bool TryConsumeMapTap(
         MPoint position,
         out PinMode mode)

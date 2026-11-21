@@ -51,7 +51,7 @@ public List<string> Badges { get; set; } = new();
                 " → ",
                 Legs.Select(
                     leg =>
-                        $"{leg.RouteName} ({(string.IsNullOrEmpty(leg.DirectionLabel) ? leg.DirectionName : leg.DirectionLabel)})"));
+                        $"{leg.FullRouteName} ({(string.IsNullOrEmpty(leg.DirectionSummary) ? leg.DirectionName : leg.DirectionSummary)})"));
         }
     }
 }
@@ -70,4 +70,12 @@ public class RoutingDebugLegInfo
 
     public double RideDistanceMeters { get; set; }
     public string DirectionLabel { get; set; } = "";
+    public string RouteCode { get; set; } = "";
+
+    public string DirectionSummary { get; set; } = "";
+
+    public string FullRouteName =>
+        string.IsNullOrWhiteSpace(RouteCode)
+            ? RouteName
+            : $"{RouteCode} · {RouteName}";
 }
