@@ -57,14 +57,10 @@
 	<ItemGroup>
 
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\Images\lugarlang_logo.png"
-                  ForegroundFile="Resources\Images\lugarlang_logo.png"
-                  ForegroundScale="0.8"
-                  Color="#F1F6FA" />
+		<MauiIcon Include="Resources\Images\lugarlang_logo.png" ForegroundFile="Resources\Images\lugarlang_logo.png" ForegroundScale="0.8" Color="#F1F6FA" />
 
 		<!-- Native Splash Screen -->
-		<MauiSplashScreen Include="Resources\Images\lugarlang_logo.png"
-                          Color="#F1F6FA" />
+		<MauiSplashScreen Include="Resources\Images\lugarlang_logo.png" Color="#F1F6FA" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -76,8 +72,7 @@
 		<MauiFont Include="Resources\Fonts\*" />
 
 		<!-- Raw Assets -->
-		<MauiAsset Include="Resources\Raw\**"
-                   LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 
 	</ItemGroup>
 
@@ -110,6 +105,8 @@
 		<ProjectReference Include="..\..\CdoGtfsConverter\CdoGtfsConverter.Backend\CdoGtfsConverter.csproj" />
 
 		<ProjectReference Include="..\..\LugarLang-Internal\LugarLang.Internal.csproj" />
+
+		<ProjectReference Include="..\LugarLang.Routing\LugarLang.Routing.csproj" />
 
 	</ItemGroup>
 

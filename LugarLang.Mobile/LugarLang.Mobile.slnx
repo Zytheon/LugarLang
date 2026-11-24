@@ -6,6 +6,12 @@
   </Configurations>
   <Project Path="../../CdoGtfsConverter/CdoGtfsConverter.Backend/CdoGtfsConverter.csproj" />
   <Project Path="../../LugarLang-Internal/LugarLang.Internal.csproj" />
+  <Project Path="../../LugarLang.Api/LugarLang.Api/LugarLang.Api.csproj">
+    <BuildType Solution="Dev|*" Project="Release" />
+  </Project>
+  <Project Path="../LugarLang.Routing/LugarLang.Routing.csproj" Id="203c838a-185a-41fd-9122-c6508f7011fa">
+    <BuildType Solution="Dev|*" Project="Release" />
+  </Project>
   <Project Path="../LugarLang.Web/" Type="Website" DisplayName="LugarLang.Web">
     <BuildType Project="Debug" />
     <Properties Name="WebsiteProperties">
