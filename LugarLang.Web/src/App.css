@@ -1,0 +1,203 @@
+
+.app {
+    min-height: 100vh;
+    background: #F1F6FA;
+    color: #253B50;
+}
+
+.topbar {
+    height: 76px;
+    background: white;
+    border-bottom: 1px solid #D6E2ED;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6%;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.brand-icon {
+    background: #486F91;
+    color: white;
+    border-radius: 10px;
+    padding: 8px 13px;
+}
+
+nav {
+    display: flex;
+    gap: 32px;
+}
+
+    nav a {
+        text-decoration: none;
+        color: #627B92;
+        font-weight: 500;
+    }
+
+        nav a.active {
+            color: #34566F;
+            font-weight: 700;
+        }
+
+.account-button,
+.primary-button {
+    border: none;
+    border-radius: 9px;
+    padding: 11px 20px;
+    background: #486F91;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.main-content {
+    max-width: 1200px;
+    margin: auto;
+    padding: 48px 32px;
+}
+
+.welcome {
+    margin-bottom: 32px;
+}
+
+.eyebrow {
+    color: #627B92;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.welcome h1 {
+    font-size: clamp(30px, 4vw, 44px);
+    margin: 12px 0;
+}
+
+.welcome p {
+    color: #627B92;
+}
+
+.region-banner {
+    min-height: 230px;
+    padding: 36px;
+    border-radius: 18px;
+    background: linear-gradient(110deg, #34566F, #7197B3);
+    color: white;
+    display: flex;
+    align-items: center;
+}
+
+    .region-banner .eyebrow,
+    .region-banner p {
+        color: #E5EEF6;
+    }
+
+    .region-banner h2 {
+        font-size: 30px;
+        margin: 8px 0;
+    }
+
+    .region-banner .primary-button {
+        margin-top: 14px;
+        background: white;
+        color: #34566F;
+    }
+
+.explore-section,
+.ride-section {
+    margin-top: 48px;
+}
+
+    .section-heading h2,
+    .ride-section h2 {
+        font-size: 25px;
+        margin-bottom: 8px;
+    }
+
+    .section-heading p,
+    .ride-section p {
+        color: #627B92;
+    }
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.category-card {
+    background: white;
+    padding: 24px;
+    border: 1px solid #D6E2ED;
+    border-radius: 14px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+    .category-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px #253B5015;
+    }
+
+    .category-card span {
+        font-size: 30px;
+    }
+
+    .category-card h3 {
+        margin: 18px 0 8px;
+    }
+
+    .category-card p {
+        color: #627B92;
+        font-size: 14px;
+    }
+
+.ride-section {
+    background: white;
+    padding: 28px;
+    border: 1px solid #D6E2ED;
+    border-radius: 14px;
+}
+
+@media (max-width: 800px) {
+    .topbar {
+        padding: 0 20px;
+    }
+
+    nav {
+        gap: 12px;
+    }
+
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .topbar {
+        height: auto;
+        padding: 18px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    nav {
+        order: 3;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .main-content {
+        padding: 28px 18px;
+    }
+
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+}
