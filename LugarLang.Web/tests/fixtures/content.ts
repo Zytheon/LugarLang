@@ -1,0 +1,96 @@
+﻿import type { ContentBundle } from '../../src/types/content';
+
+export const testContent: ContentBundle = {
+    categories: [
+        {
+            id: 'food',
+            name: 'Food',
+            icon: '🍽️',
+            displayOrder: 1,
+            isEnabled: true,
+        },
+        {
+            id: 'offices',
+            name: 'Offices',
+            icon: '🏢',
+            displayOrder: 2,
+            isEnabled: true,
+        },
+    ],
+
+    regions: [
+        {
+            name: 'Northern Mindanao',
+            photo: '',
+        },
+    ],
+
+    places: [
+        {
+            id: 'cucina-higala',
+            name: 'Cucina Higala',
+            category: 'Food',
+            categoryId: 'food',
+            region: 'Northern Mindanao',
+            province: 'Misamis Oriental',
+            city: 'Cagayan de Oro',
+            latitude: 8.482,
+            longitude: 124.647,
+            imageUrl: null,
+            isFeatured: true,
+            featuredOrder: 1,
+            photos: [],
+            contacts: {
+                facebook: null,
+                instagram: null,
+                whatsApp: null,
+                phoneNumber: null,
+            },
+            description: 'A Filipino restaurant in Cagayan de Oro.',
+        },
+        {
+            id: 'test-food-place',
+            name: 'Test Food Place',
+            category: 'Food',
+            categoryId: 'food',
+            region: 'Northern Mindanao',
+            province: 'Misamis Oriental',
+            city: 'Cagayan de Oro',
+            latitude: 8.480,
+            longitude: 124.645,
+            imageUrl: null,
+            isFeatured: true,
+            featuredOrder: 2,
+            photos: [],
+            contacts: {
+                facebook: null,
+                instagram: null,
+                whatsApp: null,
+                phoneNumber: null,
+            },
+            description: 'A test restaurant.',
+        },
+        {
+            id: 'test-office',
+            name: 'Test Office',
+            category: 'Offices',
+            categoryId: 'offices',
+            region: 'Northern Mindanao',
+            province: 'Misamis Oriental',
+            city: 'Cagayan de Oro',
+            latitude: 8.479,
+            longitude: 124.644,
+            imageUrl: null,
+            isFeatured: true,
+            featuredOrder: 3,
+            photos: [],
+            contacts: {
+                facebook: null,
+                instagram: null,
+                whatsApp: null,
+                phoneNumber: null,
+            },
+            description: 'A test office.',
+        },
+    ],
+};
